@@ -1,0 +1,19 @@
+{
+  "name": "viralsplit-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:viralsplit\" \"npm run dev:contentmulti\"",
+    "dev:api": "cd apps/api && uvicorn main:app --reload --port 8000",
+    "dev:viralsplit": "cd apps/viralsplit && npm run dev -- --port 3000",
+    "dev:contentmulti": "cd apps/contentmulti && npm run dev -- --port 3001",
+    "build": "npm run build:viralsplit && npm run build:contentmulti && npm run build:api",
+    "build:api": "cd apps/api && pip install -r requirements.txt",
+    "build:viralsplit": "cd apps/viralsplit && npm run build",
+    "build:contentmulti": "cd apps/contentmulti && npm run build",
+    "install:all": "npm install && cd apps/viralsplit && npm install && cd ../contentmulti && npm install && cd ../api && pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -45,6 +45,23 @@ const RegisterScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  // Automated test function
+  const runTestFlow = () => {
+    // Auto-fill with existing user data
+    setFormData({
+      username: 'testuser',
+      email: 'shahar@gmail.com', // Use existing email to test error
+      password: 'TestPass123!',
+      confirmPassword: 'TestPass123!',
+    });
+    setAcceptedTerms(true);
+    
+    // Auto-submit after a brief delay
+    setTimeout(() => {
+      handleRegister();
+    }, 500);
+  };
+
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -190,6 +207,16 @@ const RegisterScreen: React.FC = () => {
                 </View>
                 <Text style={styles.title}>Create Account</Text>
                 <Text style={styles.subtitle}>Join thousands of creators going viral with AI</Text>
+                
+                {/* Test Button - Only in development */}
+                {__DEV__ && (
+                  <TouchableOpacity 
+                    style={styles.testButton}
+                    onPress={runTestFlow}
+                  >
+                    <Text style={styles.testButtonText}>🧪 Run Test Flow</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Registration Form */}
@@ -598,6 +625,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  testButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

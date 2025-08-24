@@ -33,14 +33,15 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
-  const handleUploadComplete = (newProjectId: string) => {
-    if (!user) {
-      setAuthMode('register');
-      setShowAuthModal(true);
-      return;
-    }
+  const handleUploadComplete = (newProjectId: string, isTrial?: boolean) => {
     setProjectId(newProjectId);
     setStep('configure');
+    
+    // If it's a trial user, show a gentle prompt to sign up after they see the results
+    if (isTrial) {
+      // Store trial project info for later signup prompt
+      localStorage.setItem('trial_project_id', newProjectId);
+    }
   };
   
   const startTransformation = async (platforms: string[]) => {
@@ -698,6 +699,56 @@ export default function Home() {
                       );
                     })}
                   </div>
+                  
+                  {/* Trial Signup Prompt */}
+                  {!user && localStorage.getItem('trial_project_id') && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-8 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl backdrop-blur border border-blue-500/20"
+                    >
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-white mb-2">🎉 Trial Complete!</h3>
+                        <p className="text-white/70 mb-4">
+                          You've successfully transformed your first video! Create a free account to:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
+                          <div className="flex items-center gap-2 text-white/80">
+                            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                            Save unlimited projects
+                          </div>
+                          <div className="flex items-center gap-2 text-white/80">
+                            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                            Connect social accounts
+                          </div>
+                          <div className="flex items-center gap-2 text-white/80">
+                            <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                            Access advanced AI features
+                          </div>
+                        </div>
+                        <div className="flex gap-3 justify-center">
+                          <button
+                            onClick={() => {
+                              setAuthMode('register');
+                              setShowAuthModal(true);
+                            }}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white font-medium transition-all"
+                          >
+                            Create Free Account
+                          </button>
+                          <button
+                            onClick={() => {
+                              localStorage.removeItem('trial_project_id');
+                              resetFlow();
+                            }}
+                            className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-all backdrop-blur border border-white/20"
+                          >
+                            Continue as Guest
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                   
                   <button
                     onClick={resetFlow}

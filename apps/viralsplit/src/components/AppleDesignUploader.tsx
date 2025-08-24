@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { wsClient } from '../lib/websocket-client';
 
 interface VideoUploaderProps {
-  onUploadComplete: (projectId: string) => void;
+  onUploadComplete: (projectId: string, isTrial?: boolean) => void;
   onAuthRequired?: () => void;
 }
 
@@ -43,23 +43,26 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
     try {
       // Check authentication
       const authToken = localStorage.getItem('auth_token');
-      if (!authToken) {
-        if (onAuthRequired) {
-          onAuthRequired();
-        }
-        setUploadState({ status: 'error', progress: 0, error: 'Please sign in to upload videos' });
-        return;
-      }
-
+      const isTrial = !authToken;
+      
       setUploadState({ status: 'uploading', progress: 15 });
+
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json'
+      };
+      
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
 
       const response = await fetch('/api/upload/youtube', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ url, agreed_to_terms: agreedToTerms })
+        headers,
+        body: JSON.stringify({ 
+          url, 
+          agreed_to_terms: agreedToTerms,
+          is_trial: isTrial
+        })
       });
 
       if (!response.ok) {
@@ -82,7 +85,7 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         if (update.status === 'complete') {
           // Haptic-like delay before completion
           setTimeout(() => {
-            onUploadComplete(project_id);
+            onUploadComplete(project_id, isTrial);
           }, 500);
         }
       });
@@ -101,23 +104,27 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
     try {
       // Check authentication
       const authToken = localStorage.getItem('auth_token');
-      if (!authToken) {
-        if (onAuthRequired) {
-          onAuthRequired();
-        }
-        setUploadState({ status: 'error', progress: 0, error: 'Please sign in to upload videos' });
-        return;
-      }
-
+      const isTrial = !authToken;
+      
       setUploadState({ status: 'uploading', progress: 0 });
+
+      const headers: Record<string, string> = { 
+        'Content-Type': 'application/json'
+      };
+      
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
 
       const response = await fetch('/api/upload/request', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ filename: file.name, size: file.size, type: file.type })
+        headers,
+        body: JSON.stringify({ 
+          filename: file.name, 
+          size: file.size, 
+          type: file.type,
+          is_trial: isTrial
+        })
       });
 
       if (!response.ok) {
@@ -143,7 +150,7 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
       setUploadState({ status: 'complete', progress: 100, projectId: project_id });
       
       setTimeout(() => {
-        onUploadComplete(project_id);
+        onUploadComplete(project_id, isTrial);
       }, 500);
 
     } catch (error) {

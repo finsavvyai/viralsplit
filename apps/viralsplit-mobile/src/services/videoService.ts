@@ -58,7 +58,7 @@ class VideoService {
 
       // Start chunked upload
       const uploadTask = FileSystem.createUploadTask(
-        `${process.env.API_BASE_URL}/api/videos/upload`,
+        `${process.env.API_BASE_URL || 'https://viralspiritio-production.up.railway.app'}/api/videos/upload`,
         uri,
         {
           uploadType: FileSystem.FileSystemUploadType.MULTIPART,

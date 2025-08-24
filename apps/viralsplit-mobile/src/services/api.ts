@@ -22,7 +22,7 @@ class APIService {
   constructor() {
     // Use your existing API endpoint - update this with your actual API URL
     this.baseURL = __DEV__ 
-      ? 'http://localhost:8000'  // Development
+      ? 'https://viralspiritio-production.up.railway.app'  // Production
       : 'https://api.viralsplit.io'; // Production
     
     this.client = axios.create({

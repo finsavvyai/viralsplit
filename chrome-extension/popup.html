@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViralSplit Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <span class="logo-icon">🚀</span>
+        <span class="logo-text">ViralSplit</span>
+      </div>
+      <div class="header-actions">
+        <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Quick Stats -->
+      <div class="stats-section">
+        <h3>Current Page Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="videos-analyzed">0</div>
+            <div class="stat-label">Videos Analyzed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="avg-score">--</div>
+            <div class="stat-label">Avg Viral Score</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending Topics -->
+      <div class="trends-section">
+        <h3>🔥 Trending Now</h3>
+        <div id="trends-list" class="trends-list">
+          <div class="loading">Loading trends...</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h3>Quick Actions</h3>
+        <div class="action-buttons">
+          <button id="analyze-page" class="action-btn primary">
+            <span class="btn-icon">📊</span>
+            Analyze All Videos
+          </button>
+          <button id="import-best" class="action-btn">
+            <span class="btn-icon">⬇️</span>
+            Import Best Video
+          </button>
+          <button id="competitor-spy" class="action-btn">
+            <span class="btn-icon">🕵️</span>
+            Competitor Analysis
+          </button>
+          <button id="trend-alert" class="action-btn">
+            <span class="btn-icon">🔔</span>
+            Set Trend Alerts
+          </button>
+        </div>
+      </div>
+
+      <!-- Pro Features -->
+      <div class="pro-section" id="pro-section" style="display: none;">
+        <div class="pro-banner">
+          <h4>🎯 Unlock Pro Features</h4>
+          <ul>
+            <li>✅ Unlimited video analysis</li>
+            <li>✅ Real-time trend predictions</li>
+            <li>✅ Competitor tracking</li>
+            <li>✅ Bulk import & optimization</li>
+          </ul>
+          <button id="upgrade-btn" class="upgrade-btn">Upgrade to Pro</button>
+        </div>
+      </div>
+
+      <!-- Login Section (if not authenticated) -->
+      <div class="login-section" id="login-section" style="display: none;">
+        <h3>Connect Your Account</h3>
+        <p>Sign in to unlock all features</p>
+        <button id="login-btn" class="action-btn primary">
+          Sign In to ViralSplit
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <a href="https://viralsplit.io/dashboard" target="_blank" class="footer-link">
+        Open Dashboard
+      </a>
+      <span class="separator">•</span>
+      <a href="https://viralsplit.io/help" target="_blank" class="footer-link">
+        Help
+      </a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

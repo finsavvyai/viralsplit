@@ -2,9 +2,16 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { VideoUploader } from '../components/VideoUploader';
+import { EnhancedVideoUploader } from '../components/EnhancedVideoUploader';
 import { PlatformSelector } from '../components/PlatformSelector';
-import { Download, ExternalLink, RotateCcw } from 'lucide-react';
+import { AuthModal } from '../components/AuthModal';
+import { SocialAccountManager } from '../components/SocialAccountManager';
+import { ViralScoreCard } from '../components/ViralScoreCard';
+import { HookSuggestions } from '../components/HookSuggestions';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { AdvancedAIFeatures } from '../components/AdvancedAIFeatures';
+import { useAuth } from '../components/AuthProvider';
+import { Download, ExternalLink, RotateCcw, User, Settings, LogOut, BarChart3 } from 'lucide-react';
 
 interface TransformationResult {
   platform: string;
@@ -14,19 +21,34 @@ interface TransformationResult {
 }
 
 export default function Home() {
-  const [step, setStep] = useState<'upload' | 'configure' | 'processing' | 'complete'>('upload');
+  const { user, logout, socialAccounts } = useAuth();
+  const [step, setStep] = useState<'upload' | 'configure' | 'processing' | 'complete' | 'analytics'>('upload');
   const [projectId, setProjectId] = useState<string>('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [transformationStatus, setTransformationStatus] = useState<Record<string, 'pending' | 'processing' | 'completed' | 'failed'>>({});
   const [results, setResults] = useState<TransformationResult[]>([]);
   const [isTransforming, setIsTransforming] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSocialAccounts, setShowSocialAccounts] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   
   const handleUploadComplete = (newProjectId: string) => {
+    if (!user) {
+      setAuthMode('register');
+      setShowAuthModal(true);
+      return;
+    }
     setProjectId(newProjectId);
     setStep('configure');
   };
   
   const startTransformation = async (platforms: string[]) => {
+    if (!user) {
+      setAuthMode('login');
+      setShowAuthModal(true);
+      return;
+    }
+
     setIsTransforming(true);
     setStep('processing');
     
@@ -40,7 +62,10 @@ export default function Home() {
     try {
       const response = await fetch('/api/projects/' + projectId + '/transform', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({ platforms: selectedPlatforms })
       });
       
@@ -70,12 +95,38 @@ export default function Home() {
               setTimeout(() => {
                 setStep('complete');
                 setIsTransforming(false);
-                setResults(platforms.map(p => ({
-                  platform: p,
-                  status: 'completed' as const,
-                  url: `https://cdn.viralsplit.io/outputs/${p}/video.mp4`,
-                  thumbnail: `https://cdn.viralsplit.io/thumbnails/${p}/thumb.jpg`
-                })));
+                // Poll backend for actual URLs
+                fetch('/api/projects/' + projectId + '/status', {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                  }
+                }).then(res => res.json()).then(data => {
+                  if (data.transformations) {
+                    const finalResults = Object.entries(data.transformations).map(([platform, info]: [string, any]) => ({
+                      platform,
+                      status: 'completed' as const,
+                      url: info.url || `https://cdn.viralsplit.io/outputs/${platform}/video.mp4`,
+                      thumbnail: info.thumbnail
+                    }));
+                    setResults(finalResults);
+                  } else {
+                    // Fallback for demo
+                    setResults(platforms.map(p => ({
+                      platform: p,
+                      status: 'completed' as const,
+                      url: `https://cdn.viralsplit.io/outputs/${p}/video.mp4`,
+                      thumbnail: `https://cdn.viralsplit.io/thumbnails/${p}/thumb.jpg`
+                    })));
+                  }
+                }).catch(() => {
+                  // Fallback for demo
+                  setResults(platforms.map(p => ({
+                    platform: p,
+                    status: 'completed' as const,
+                    url: `https://cdn.viralsplit.io/outputs/${p}/video.mp4`,
+                    thumbnail: `https://cdn.viralsplit.io/thumbnails/${p}/thumb.jpg`
+                  })));
+                });
               }, 1000);
             }
           }, 2000 + (index * 500));
@@ -102,10 +153,85 @@ export default function Home() {
     setIsTransforming(false);
   };
 
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    // Continue with transformation if user was prompted to login
+    if (selectedPlatforms.length > 0) {
+      startTransformation(selectedPlatforms);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Animated gradient background */}
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20" />
+      
+      {/* Header with Auth */}
+      <header className="relative z-20 border-b border-white/10">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              ViralSplit
+            </h1>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="text-gray-400">Credits:</span>
+                  <span className="font-semibold text-purple-400">{user.credits}</span>
+                </div>
+                <button
+                  onClick={() => setShowSocialAccounts(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Accounts ({socialAccounts.length})</span>
+                </button>
+                <button
+                  onClick={() => setStep('analytics')}
+                  className="flex items-center space-x-2 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 rounded-lg transition-colors"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="text-sm">Analytics</span>
+                </button>
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm">{user.email}</span>
+                  <button
+                    onClick={logout}
+                    className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setAuthMode('login');
+                    setShowAuthModal(true);
+                  }}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthMode('register');
+                    setShowAuthModal(true);
+                  }}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
       
       <div className="relative z-10 container mx-auto px-4 py-12">
         {/* Hero Section */}
@@ -122,11 +248,32 @@ export default function Home() {
           <p className="text-xl text-gray-400 mb-2">
             Go viral on every platform with one upload
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4">
             <span className={`w-2 h-2 rounded-full ${step === 'upload' ? 'bg-purple-400' : 'bg-gray-600'}`} />
             <span className={`w-2 h-2 rounded-full ${step === 'configure' ? 'bg-purple-400' : 'bg-gray-600'}`} />
             <span className={`w-2 h-2 rounded-full ${step === 'processing' ? 'bg-purple-400' : 'bg-gray-600'}`} />
             <span className={`w-2 h-2 rounded-full ${step === 'complete' ? 'bg-green-400' : 'bg-gray-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${step === 'analytics' ? 'bg-blue-400' : 'bg-gray-600'}`} />
+          </div>
+          
+          <div className="flex justify-center space-x-4">
+            <a
+              href="/apple"
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 backdrop-blur rounded-full text-white/70 hover:text-white text-sm transition-all border border-white/10"
+            >
+              ✨ Try Apple Design
+            </a>
+            {!user && (
+              <button
+                onClick={() => {
+                  setAuthMode('register');
+                  setShowAuthModal(true);
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-full text-white text-sm transition-all"
+              >
+                Get Started Free
+              </button>
+            )}
           </div>
         </motion.div>
         
@@ -141,7 +288,13 @@ export default function Home() {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-8"
               >
-                <VideoUploader onUploadComplete={handleUploadComplete} />
+                <EnhancedVideoUploader 
+                  onUploadComplete={handleUploadComplete}
+                  onAuthRequired={() => {
+                    setAuthMode('register');
+                    setShowAuthModal(true);
+                  }}
+                />
                 
                 {/* Social Proof */}
                 <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-gray-400">
@@ -174,9 +327,25 @@ export default function Home() {
                 className="space-y-8"
               >
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold mb-2">Choose Your Platforms</h2>
-                  <p className="text-gray-400">Select where you want to go viral</p>
+                  <h2 className="text-3xl font-bold mb-2">Optimize Your Content</h2>
+                  <p className="text-gray-400">AI-powered viral optimization for every platform</p>
+                  {!user && (
+                    <p className="text-sm text-purple-400 mt-2">
+                      Sign in to save your projects and connect social accounts
+                    </p>
+                  )}
                 </div>
+                
+                {/* AI Features Grid */}
+                {user && projectId && (
+                  <div className="space-y-6 mb-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <ViralScoreCard projectId={projectId} platforms={selectedPlatforms} />
+                      <HookSuggestions projectId={projectId} platforms={selectedPlatforms} />
+                    </div>
+                    <AdvancedAIFeatures projectId={projectId} platforms={selectedPlatforms} />
+                  </div>
+                )}
                 
                 <PlatformSelector
                   selected={selectedPlatforms}
@@ -257,9 +426,63 @@ export default function Home() {
                 </button>
               </motion.div>
             )}
+            
+            {step === 'analytics' && (
+              <motion.div
+                key="analytics"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2">Your Analytics</h2>
+                  <p className="text-gray-400">Track your viral content performance</p>
+                  <button
+                    onClick={() => setStep('upload')}
+                    className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+                  >
+                    ← Back to Upload
+                  </button>
+                </div>
+                
+                {user ? (
+                  <AnalyticsDashboard userId={user.id} />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400 mb-4">Sign in to view your analytics</p>
+                    <button
+                      onClick={() => {
+                        setAuthMode('login');
+                        setShowAuthModal(true);
+                      }}
+                      className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultMode={authMode}
+      />
+
+      {/* Social Accounts Modal */}
+      {showSocialAccounts && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <SocialAccountManager onClose={() => setShowSocialAccounts(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

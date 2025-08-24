@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Upload, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface VideoUploaderProps {
   onUploadComplete: (projectId: string) => void;

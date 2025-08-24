@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: viralsplit-api
+    env: python
+    buildCommand: pip install -r apps/api/requirements.production.txt
+    startCommand: cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
+    envVars:
+      - key: CLOUDFLARE_ACCOUNT_ID
+        value: your_account_id
+      - key: CLOUDFLARE_ACCESS_KEY_ID
+        value: your_access_key_id
+      - key: CLOUDFLARE_SECRET_ACCESS_KEY
+        value: your_secret_access_key
+      - key: CDN_DOMAIN
+        value: cdn.viralsplit.io
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+
+  - type: redis
+    name: viralsplit-redis
+    ipAllowList: []
+
+  - type: worker
+    name: viralsplit-worker
+    env: python
+    buildCommand: pip install -r apps/api/requirements.production.txt
+    startCommand: cd apps/api && celery -A main.celery_app worker --loglevel=info
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          name: viralsplit-redis
+          type: redis
+          property: connectionString

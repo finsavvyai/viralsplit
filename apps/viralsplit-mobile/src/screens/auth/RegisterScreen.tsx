@@ -1,0 +1,485 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+
+type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+};
+
+type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
+
+const RegisterScreen: React.FC = () => {
+  const navigation = useNavigation<RegisterScreenNavigationProp>();
+  const { register } = useAuth();
+  const { colors } = useTheme();
+  
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const validateForm = () => {
+    const { username, email, password, confirmPassword } = formData;
+    
+    if (!username.trim()) {
+      Alert.alert('Error', 'Please enter a username');
+      return false;
+    }
+    
+    if (username.trim().length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters long');
+      return false;
+    }
+    
+    if (!email.trim() || !email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+    
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return false;
+    }
+    
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return false;
+    }
+    
+    if (!acceptedTerms) {
+      Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
+      await register(
+        formData.email.trim().toLowerCase(), 
+        formData.password,
+        formData.username.trim()
+      );
+    } catch (error: any) {
+      Alert.alert('Registration Failed', error.message || 'Failed to create account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialSignUp = (provider: string) => {
+    Alert.alert('Coming Soon', `${provider} registration will be available soon!`);
+  };
+
+  return (
+    <LinearGradient
+      colors={[colors.secondary, colors.primary]}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <View style={styles.content}>
+              {/* Header */}
+              <View style={styles.header}>
+                <TouchableOpacity 
+                  style={styles.backButton}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                
+                <View style={styles.logoContainer}>
+                  <Ionicons name="person-add" size={40} color="#FFFFFF" />
+                </View>
+                <Text style={styles.title}>Create Account</Text>
+                <Text style={styles.subtitle}>Join thousands of creators going viral with AI</Text>
+              </View>
+
+              {/* Registration Form */}
+              <View style={styles.form}>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.7)" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Username"
+                    placeholderTextColor="rgba(255,255,255,0.7)"
+                    value={formData.username}
+                    onChangeText={(text) => updateFormData('username', text)}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.7)" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="rgba(255,255,255,0.7)"
+                    value={formData.email}
+                    onChangeText={(text) => updateFormData('email', text)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.7)" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password (min 8 characters)"
+                    placeholderTextColor="rgba(255,255,255,0.7)"
+                    value={formData.password}
+                    onChangeText={(text) => updateFormData('password', text)}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons 
+                      name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                      size={20} 
+                      color="rgba(255,255,255,0.7)" 
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.7)" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="rgba(255,255,255,0.7)"
+                    value={formData.confirmPassword}
+                    onChangeText={(text) => updateFormData('confirmPassword', text)}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons 
+                      name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
+                      size={20} 
+                      color="rgba(255,255,255,0.7)" 
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Password Requirements */}
+                <View style={styles.passwordRequirements}>
+                  <Text style={styles.requirementsTitle}>Password must contain:</Text>
+                  <View style={styles.requirement}>
+                    <Ionicons 
+                      name={formData.password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
+                      size={16} 
+                      color={formData.password.length >= 8 ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                    />
+                    <Text style={[styles.requirementText, 
+                      formData.password.length >= 8 && styles.requirementMet
+                    ]}>
+                      At least 8 characters
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Terms and Conditions */}
+                <TouchableOpacity 
+                  style={styles.checkboxContainer}
+                  onPress={() => setAcceptedTerms(!acceptedTerms)}
+                >
+                  <Ionicons 
+                    name={acceptedTerms ? "checkbox" : "square-outline"} 
+                    size={20} 
+                    color={acceptedTerms ? "#10B981" : "rgba(255,255,255,0.7)"} 
+                  />
+                  <Text style={styles.checkboxText}>
+                    I agree to the{' '}
+                    <Text style={styles.linkText}>Terms of Service</Text>
+                    {' '}and{' '}
+                    <Text style={styles.linkText}>Privacy Policy</Text>
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.registerButton, !acceptedTerms && styles.registerButtonDisabled]}
+                  onPress={handleRegister}
+                  disabled={isLoading || !acceptedTerms}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#9333EA" size="small" />
+                  ) : (
+                    <Text style={styles.registerButtonText}>Create Account</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Social Registration */}
+              <View style={styles.socialSection}>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or sign up with</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <View style={styles.socialButtons}>
+                  <TouchableOpacity 
+                    style={styles.socialButton}
+                    onPress={() => handleSocialSignUp('Google')}
+                  >
+                    <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.socialButton}
+                    onPress={() => handleSocialSignUp('Apple')}
+                  >
+                    <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.socialButton}
+                    onPress={() => handleSocialSignUp('Twitter')}
+                  >
+                    <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Sign In Link */}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.signInLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 30,
+    paddingTop: 20,
+    paddingBottom: 30,
+    minHeight: '100%',
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    padding: 8,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    marginTop: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  form: {
+    marginBottom: 30,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  input: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  passwordRequirements: {
+    marginBottom: 20,
+  },
+  requirementsTitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  requirement: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  requirementText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  requirementMet: {
+    color: '#10B981',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 25,
+  },
+  checkboxText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginLeft: 12,
+  },
+  linkText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  registerButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 55,
+  },
+  registerButtonDisabled: {
+    opacity: 0.6,
+  },
+  registerButtonText: {
+    color: '#9333EA',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  socialSection: {
+    marginBottom: 30,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  dividerText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    marginHorizontal: 16,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+  },
+  socialButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 16,
+  },
+  signInLink: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+export default RegisterScreen;

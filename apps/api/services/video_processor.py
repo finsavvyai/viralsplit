@@ -50,8 +50,8 @@ class VideoProcessor:
     def __init__(self, storage=None):
         self.storage = storage
     
-    async def process_video(self, input_url: str, platforms: List[str], project_id: str = None) -> Dict:
-        """Process video for multiple platforms"""
+    async def process_video(self, input_url: str, platforms: List[str], project_id: str = None, user_id: str = None) -> Dict:
+        """Process video for multiple platforms with user-specific naming"""
         results = {}
         
         # Download original from storage
@@ -69,15 +69,26 @@ class VideoProcessor:
                         spec
                     )
                     
-                    # Upload transformed video to storage
-                    output_key = f"outputs/{platform}/{project_id or 'unknown'}.mp4"
+                    # Generate unique output key with user info
+                    if user_id and project_id:
+                        output_key = self.storage.generate_output_key(
+                            user_id=user_id,
+                            project_id=project_id,
+                            platform=platform,
+                            variant='standard'
+                        )
+                    else:
+                        # Fallback for anonymous uploads
+                        output_key = f"outputs/{platform}/{project_id or 'unknown'}.mp4"
+                    
                     output_url = self.storage.upload_video(output_path, output_key)
                     
                     if output_url:
                         results[platform] = {
                             'url': output_url,
                             'status': 'completed',
-                            'specs': spec
+                            'specs': spec,
+                            'key': output_key
                         }
                     else:
                         results[platform] = {
@@ -94,59 +105,103 @@ class VideoProcessor:
             else:
                 # Fallback - return mock results for development
                 for platform in platforms:
+                    if user_id and project_id:
+                        output_key = self.storage.generate_output_key(
+                            user_id=user_id,
+                            project_id=project_id,
+                            platform=platform,
+                            variant='standard'
+                        )
+                        output_url = self.storage.get_video_url(output_key)
+                    else:
+                        output_url = f"https://cdn.viralsplit.io/outputs/{platform}/{project_id}.mp4"
+                    
                     results[platform] = {
-                        'url': f"https://cdn.viralsplit.io/outputs/{platform}/{project_id}.mp4",
+                        'url': output_url,
                         'status': 'completed',
-                        'specs': self.PLATFORM_SPECS.get(platform, {})
+                        'specs': self.PLATFORM_SPECS.get(platform, {}),
+                        'key': output_key if user_id and project_id else None
                     }
         
         return results
     
-    async def process_single_platform(self, input_url: str, platform: str, project_id: str = None) -> Dict:
-        """Process video for a single platform"""
-        result = await self.process_video(input_url, [platform], project_id)
-        return result.get(platform, {})
-    
     async def _transform_video(self, input_path: str, platform: str, spec: dict):
         """Transform video for specific platform"""
-        output_path = tempfile.mktemp(suffix=f'_{platform}.mp4')
-        
         try:
-            # Basic transformation using ffmpeg-python
+            # Create temporary output file
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_output:
+                output_path = tmp_output.name
+            
+            # Build FFmpeg command
             stream = ffmpeg.input(input_path)
             
-            # Crop/pad for aspect ratio
-            stream = self._adjust_aspect_ratio(stream, spec['resolution'])
+            # Apply transformations based on platform specs
+            if 'resolution' in spec:
+                width, height = spec['resolution']
+                stream = ffmpeg.filter(stream, 'scale', width, height, force_original_aspect_ratio='decrease')
+                stream = ffmpeg.filter(stream, 'pad', width, height, '(ow-iw)/2', '(oh-ih)/2')
             
-            # Trim duration if needed
-            if spec['duration']:
-                stream = stream.filter('trim', duration=spec['duration'])
+            if 'fps' in spec:
+                stream = ffmpeg.filter(stream, 'fps', spec['fps'])
             
-            # Output with platform specs
+            if 'duration' in spec:
+                stream = ffmpeg.filter(stream, 'trim', duration=spec['duration'])
+            
+            # Output with specified bitrate
+            bitrate = spec.get('bitrate', '5M')
             stream = ffmpeg.output(
-                stream,
+                stream, 
                 output_path,
                 vcodec='libx264',
                 acodec='aac',
-                r=spec['fps'],
-                video_bitrate=spec['bitrate'],
+                video_bitrate=bitrate,
+                audio_bitrate='128k',
                 preset='fast',
                 movflags='faststart'
             )
             
-            # Run the transformation
+            # Run FFmpeg
             ffmpeg.run(stream, overwrite_output=True, quiet=True)
             
+            return output_path
+            
         except Exception as e:
-            print(f"Error transforming video for {platform}: {e}")
-            # Fallback: copy original file
-            subprocess.run(['cp', input_path, output_path])
-        
-        return output_path
+            print(f"Video transformation error for {platform}: {e}")
+            # Return input path as fallback
+            return input_path
     
-    def _adjust_aspect_ratio(self, stream, target_resolution):
-        """Smart crop/pad for aspect ratio"""
-        width, height = target_resolution
+    async def create_variants(self, input_path: str, platform: str, user_id: str, project_id: str) -> Dict:
+        """Create multiple variants for a platform (e.g., different aspect ratios)"""
+        variants = {}
         
-        # Simple center crop - in production, use smart cropping
-        return stream.filter('scale', width, height)
+        if platform == 'tiktok':
+            # Create different TikTok variants
+            variants['standard'] = await self._transform_video(input_path, platform, self.PLATFORM_SPECS[platform])
+            variants['square'] = await self._transform_video(input_path, platform, {
+                **self.PLATFORM_SPECS[platform],
+                'resolution': (1080, 1080)
+            })
+        
+        # Upload variants
+        results = {}
+        for variant_name, variant_path in variants.items():
+            output_key = self.storage.generate_output_key(
+                user_id=user_id,
+                project_id=project_id,
+                platform=platform,
+                variant=variant_name
+            )
+            
+            output_url = self.storage.upload_video(variant_path, output_key)
+            results[variant_name] = {
+                'url': output_url,
+                'key': output_key
+            }
+            
+            # Clean up
+            try:
+                os.unlink(variant_path)
+            except:
+                pass
+        
+        return results

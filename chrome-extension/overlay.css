@@ -1,0 +1,344 @@
+/* ViralSplit Overlay Styles */
+
+.viralsplit-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.viralsplit-overlay > * {
+  pointer-events: auto;
+}
+
+/* Viral Score Badge */
+.viralsplit-score {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  backdrop-filter: blur(10px);
+  background-color: rgba(102, 126, 234, 0.95);
+}
+
+.viralsplit-score:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.viralsplit-score .score-number {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.viralsplit-score .score-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Score Classes */
+.viralsplit-score.score-viral {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  animation: pulse 2s infinite;
+}
+
+.viralsplit-score.score-good {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.viralsplit-score.score-moderate {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.viralsplit-score.score-low {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Trend Badge */
+.viralsplit-trend {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.viralsplit-trend.trend-rising {
+  color: #10b981;
+  border: 1px solid #10b981;
+}
+
+.viralsplit-trend.trend-peaking {
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+  animation: blink 1.5s infinite;
+}
+
+.viralsplit-trend.trend-stable {
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.viralsplit-trend.trend-declining {
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* Stats */
+.viralsplit-stats {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.viralsplit-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viralsplit-stats .stat-icon {
+  font-size: 14px;
+}
+
+.viralsplit-stats .stat-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Detail Panel */
+.viralsplit-detail-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 10px;
+  width: 320px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.viralsplit-detail-panel.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.panel-content {
+  padding: 16px;
+}
+
+.tips-section,
+.improvements-section {
+  margin-bottom: 16px;
+}
+
+.tips-section h4,
+.improvements-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.tips-section ul,
+.improvements-section ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tips-section li,
+.improvements-section li {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.tips-section li:before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+}
+
+.improvements-section li:before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  color: #f59e0b;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.import-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.import-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.analyze-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.analyze-btn:hover {
+  background: #e5e7eb;
+}
+
+/* Notification */
+.viralsplit-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 10001;
+}
+
+.viralsplit-notification.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(245, 87, 108, 0.6);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+  }
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Platform-specific adjustments */
+/* TikTok */
+.tiktok-video-container .viralsplit-overlay {
+  top: 60px;
+}
+
+/* Instagram */
+article[role="presentation"] .viralsplit-overlay {
+  top: 15px;
+  right: 15px;
+}
+
+/* YouTube */
+#dismissible .viralsplit-overlay {
+  top: 5px;
+  right: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .viralsplit-detail-panel {
+    width: 280px;
+  }
+  
+  .viralsplit-score .score-number {
+    font-size: 20px;
+  }
+}

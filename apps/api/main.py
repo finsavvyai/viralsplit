@@ -463,7 +463,7 @@ async def transform_video(
 @app.get("/api/projects/{project_id}/status")
 async def get_project_status(
     project_id: str,
-    user: User = Depends(auth_service.get_current_user)
+    user: Optional[User] = Depends(auth_service.get_current_user_optional)
 ):
     """Get project status with user authentication"""
     try:
@@ -471,8 +471,16 @@ async def get_project_status(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        if project.get("user_id") != user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        # For trial projects, allow access without user verification
+        if project.get("is_trial"):
+            if user and project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        else:
+            # For regular projects, require user authentication
+            if not user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
         
         # Get task status if processing
         task_status = None

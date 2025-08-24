@@ -17,6 +17,7 @@ interface UploadState {
 }
 
 export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onAuthRequired }) => {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
   const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle', progress: 0 });
   const [dragActive, setDragActive] = useState(false);
   const [inputMode, setInputMode] = useState<'file' | 'url'>('file');
@@ -55,8 +56,6 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
-      
       const response = await fetch(`${API_BASE_URL}/api/upload/youtube`, {
         method: 'POST',
         headers,
@@ -118,8 +117,6 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
-      
       const response = await fetch(`${API_BASE_URL}/api/upload/request`, {
         method: 'POST',
         headers,
@@ -142,8 +139,6 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
       });
 
       setUploadState({ status: 'processing', progress: 100, projectId: project_id });
-      
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
       
       const processResponse = await fetch(`${API_BASE_URL}/api/upload/complete/${project_id}`, {
         method: 'POST'

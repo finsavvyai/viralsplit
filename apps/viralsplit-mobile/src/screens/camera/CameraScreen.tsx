@@ -8,7 +8,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { Camera, CameraType } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,15 +32,15 @@ const CameraScreen: React.FC = () => {
   const { colors } = useTheme();
   const { isRecording, settings } = useAppSelector(state => state.camera);
   
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraPermission, requestCameraPermission] = Camera.useCameraPermissions();
   const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
-  const [facing, setFacing] = useState<CameraType>('back');
+  const [facing, setFacing] = useState(CameraType.back);
   const [isReady, setIsReady] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [realTimeScore, setRealTimeScore] = useState(0);
   
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<Camera>(null);
   const recordingTimer = useRef<NodeJS.Timeout | null>(null);
   const recordButtonAnimation = useRef(new Animated.Value(1)).current;
   const scoreAnimation = useRef(new Animated.Value(0)).current;
@@ -160,7 +160,7 @@ const CameraScreen: React.FC = () => {
   };
 
   const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
+    setFacing(current => (current === CameraType.back ? CameraType.front : CameraType.back));
   };
 
   const updateSetting = <K extends keyof CameraSettings>(key: K, value: CameraSettings[K]) => {
@@ -192,12 +192,11 @@ const CameraScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <CameraView
+      <Camera
         ref={cameraRef}
         style={styles.camera}
-        facing={facing}
+        type={facing}
         onCameraReady={() => setIsReady(true)}
-        mode="video"
       >
         <SafeAreaView style={styles.overlay}>
           {/* Header */}
@@ -380,7 +379,7 @@ const CameraScreen: React.FC = () => {
             </BlurView>
           )}
         </SafeAreaView>
-      </CameraView>
+      </Camera>
     </View>
   );
 };

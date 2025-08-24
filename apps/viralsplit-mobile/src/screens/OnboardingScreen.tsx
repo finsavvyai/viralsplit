@@ -58,7 +58,7 @@ const onboardingPages: OnboardingPage[] = [
 
 const OnboardingScreen: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
-  const pagerRef = useRef<PagerView>(null);
+  // const pagerRef = useRef<PagerView>(null);
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
 

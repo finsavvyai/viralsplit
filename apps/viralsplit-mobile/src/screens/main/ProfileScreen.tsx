@@ -65,7 +65,7 @@ const ProfileScreen: React.FC = () => {
           id: 'credits',
           title: 'Credits',
           subtitle: `${user?.credits || 0} credits available`,
-          icon: 'diamond',
+          icon: 'star-outline',
           action: () => navigation.navigate('Credits'),
         },
         {

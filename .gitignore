@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 */node_modules/
+**/node_modules/
 
 # Environment files
 .env
@@ -8,10 +9,14 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+**/.env
+**/.env.*
 
 # Next.js
 .next/
 */out/
+**/.next/
+**/out/
 
 # Python
 __pycache__/
@@ -23,39 +28,102 @@ apps/api/venv/
 .venv/
 env/
 ENV/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+**/venv/
+**/.venv/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+**/.vscode/
+**/.idea/
 
 # OS
 .DS_Store
 Thumbs.db
+**/.DS_Store
+**/Thumbs.db
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+**/*.log
 
 # Build outputs
 dist/
 build/
 *.tsbuildinfo
+**/dist/
+**/build/
 
 # Coverage
 coverage/
 .coverage
+**/coverage/
+**/.coverage
 
 # Database
 *.db
 *.sqlite
+**/*.db
+**/*.sqlite
 
 # Cloudflare
 wrangler.toml
+**/wrangler.toml
 
 # Temporary files
 *.tmp
 *.temp
+**/*.tmp
+**/*.temp
+
+# Mobile specific
+# React Native
+**/android/
+**/ios/
+**/.expo/
+**/expo-env.d.ts
+
+# Expo
+**/.expo/
+**/dist/
+**/web-build/
+
+# Testing
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+
+# Railway
+.railway/
+
+# Docker
+.dockerignore
+
+# API Keys and Secrets
+**/secrets/
+**/keys/
+**/*.key
+**/*.pem
+
+# Uploads and Media
+**/uploads/
+**/media/
+**/static/uploads/
+
+# Cache
+**/.cache/
+**/cache/
+
+# Local development
+**/local/
+**/dev/

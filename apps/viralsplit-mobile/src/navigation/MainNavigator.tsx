@@ -151,7 +151,7 @@ const MainNavigator: React.FC = () => {
         name="Camera" 
         component={CameraScreen}
         options={{ 
-          presentation: 'fullScreenModal',
+          presentation: 'modal',
           cardStyle: { backgroundColor: '#000' }
         }}
       />

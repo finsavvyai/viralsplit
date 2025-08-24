@@ -4,6 +4,7 @@ import authSlice from './slices/authSlice';
 import projectsSlice from './slices/projectsSlice';
 import cameraSlice from './slices/cameraSlice';
 import uiSlice from './slices/uiSlice';
+import uploadSlice from './slices/uploadSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     projects: projectsSlice,
     camera: cameraSlice,
     ui: uiSlice,
+    upload: uploadSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -14,6 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Glass from '@/components/Glass';
+import { typography, spacing, borderRadius, animationConfig } from '@/styles/design-system';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAppSelector, useAppDispatch } from '@/store';
@@ -112,53 +117,66 @@ const HomeScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.greeting}>
-            <Text style={[styles.greetingText, { color: colors.text }]}>
+            <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
               Welcome back,
             </Text>
-            <Text style={[styles.userName, { color: colors.primary }]}>
+            <Text style={[styles.userName, { color: colors.text }]}>
               {user?.username || 'Creator'}
             </Text>
           </View>
           
-          <TouchableOpacity 
-            style={[styles.creditsButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('Credits')}
-          >
-            <Ionicons name="diamond" size={16} color={colors.primary} />
-            <Text style={[styles.creditsText, { color: colors.text }]}>
-              {user?.credits || 0}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Glass variant="subtle" borderRadius="round" style={styles.creditsButton}>
+              <TouchableOpacity 
+                style={styles.creditsButton}
+                onPress={() => navigation.navigate('Credits')}
+              >
+                <Ionicons name="star-outline" size={16} color={colors.primary} />
+                <Text style={[styles.creditsText, { color: colors.text }]}>
+                  {user?.credits || 0}
+                </Text>
+              </TouchableOpacity>
+            </Glass>
+          </View>
         </View>
 
         {/* Processing Status */}
         {processingProjects.length > 0 && (
-          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="hourglass" size={20} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Processing ({processingProjects.length})
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="hourglass" size={20} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Processing ({processingProjects.length})
+                </Text>
+              </View>
             </View>
-            {processingProjects.map((project) => (
-              <TouchableOpacity
-                key={project.id}
-                style={styles.processingItem}
-                onPress={() => navigation.navigate('ProcessingStatus', { projectId: project.id })}
-              >
-                <View style={styles.processingInfo}>
-                  <Text style={[styles.processingName, { color: colors.text }]}>
-                    {project.filename}
-                  </Text>
-                  <Text style={[styles.processingPlatforms, { color: colors.textSecondary }]}>
-                    {project.platforms.join(', ')}
-                  </Text>
-                </View>
-                <View style={styles.processingStatus}>
-                  <View style={[styles.processingDot, { backgroundColor: colors.warning }]} />
-                </View>
-              </TouchableOpacity>
-            ))}
+            <Card variant="glass" padding="sm">
+              {processingProjects.map((project, index) => (
+                <TouchableOpacity
+                  key={project.id}
+                  style={[
+                    styles.processingItem,
+                    index !== processingProjects.length - 1 && { 
+                      borderBottomColor: colors.border 
+                    }
+                  ]}
+                  onPress={() => navigation.navigate('ProcessingStatus', { projectId: project.id })}
+                >
+                  <View style={styles.processingInfo}>
+                    <Text style={[styles.processingName, { color: colors.text }]}>
+                      {project.filename}
+                    </Text>
+                    <Text style={[styles.processingPlatforms, { color: colors.textSecondary }]}>
+                      {project.platforms.join(', ')}
+                    </Text>
+                  </View>
+                  <View style={styles.processingStatus}>
+                    <View style={[styles.processingDot, { backgroundColor: colors.warning }]} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </Card>
           </View>
         )}
 
@@ -181,13 +199,15 @@ const HomeScreen: React.FC = () => {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <View style={styles.quickActionContent}>
+                  <View style={styles.quickActionHeader}>
                     <Ionicons name={action.icon} size={32} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.quickActionFooter}>
                     <Text style={styles.quickActionTitle}>{action.title}</Text>
                     <Text style={styles.quickActionSubtitle}>{action.subtitle}</Text>
                     {action.credits && (
                       <View style={styles.creditsRequired}>
-                        <Ionicons name="diamond" size={12} color="#FFFFFF" />
+                        <Ionicons name="star-outline" size={12} color="#FFFFFF" />
                         <Text style={styles.creditsRequiredText}>{action.credits}</Text>
                       </View>
                     )}
@@ -203,15 +223,16 @@ const HomeScreen: React.FC = () => {
           <View style={styles.recentSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Projects</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Library' })}>
+              <TouchableOpacity onPress={() => navigation.navigate('MainTabs')}>
                 <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
               </TouchableOpacity>
             </View>
             
             {recentProjects.map((project) => (
-              <TouchableOpacity
+              <Card
                 key={project.id}
-                style={[styles.projectCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                variant="glass"
+                pressable
                 onPress={() => {
                   if (project.status === 'completed') {
                     navigation.navigate('Results', { projectId: project.id });
@@ -219,6 +240,7 @@ const HomeScreen: React.FC = () => {
                     navigation.navigate('ProcessingStatus', { projectId: project.id });
                   }
                 }}
+                style={styles.projectCard}
               >
                 <View style={styles.projectThumbnail}>
                   <Ionicons name="videocam" size={24} color={colors.textSecondary} />
@@ -242,7 +264,7 @@ const HomeScreen: React.FC = () => {
                 </View>
                 
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </Card>
             ))}
           </View>
         )}
@@ -254,27 +276,27 @@ const HomeScreen: React.FC = () => {
           </Text>
           
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Card variant="glass" style={styles.statCard}>
               <Ionicons name="videocam" size={24} color={colors.primary} />
               <Text style={[styles.statNumber, { color: colors.text }]}>{projects.length}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Videos</Text>
-            </View>
+            </Card>
             
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Card variant="glass" style={styles.statCard}>
               <Ionicons name="checkmark-circle" size={24} color={colors.success} />
               <Text style={[styles.statNumber, { color: colors.text }]}>
                 {projects.filter(p => p.status === 'completed').length}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completed</Text>
-            </View>
+            </Card>
             
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Card variant="glass" style={styles.statCard}>
               <Ionicons name="phone-portrait" size={24} color={colors.secondary} />
               <Text style={[styles.statNumber, { color: colors.text }]}>
                 {projects.reduce((total, project) => total + project.platforms.length, 0)}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Platforms</Text>
-            </View>
+            </Card>
           </View>
         </View>
       </ScrollView>
@@ -292,69 +314,69 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   greeting: {
     flex: 1,
   },
   greetingText: {
-    fontSize: 16,
-    marginBottom: 4,
+    ...typography.subheadline,
+    marginBottom: spacing.xs,
   },
   userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...typography.largeTitle,
+    fontWeight: '700',
   },
   creditsButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   creditsText: {
-    marginLeft: 6,
-    fontSize: 16,
+    ...typography.callout,
     fontWeight: '600',
+    marginLeft: spacing.xs,
   },
   section: {
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.title3,
   },
   viewAllText: {
-    fontSize: 14,
+    ...typography.callout,
     fontWeight: '600',
   },
   processingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   processingInfo: {
     flex: 1,
   },
   processingName: {
-    fontSize: 16,
+    ...typography.callout,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: spacing.xs,
   },
   processingPlatforms: {
-    fontSize: 14,
+    ...typography.caption1,
   },
   processingStatus: {
     alignItems: 'center',
@@ -365,115 +387,128 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   quickActionsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: spacing.md,
     justifyContent: 'space-between',
   },
   quickActionCard: {
-    width: (width - 50) / 2,
-    marginBottom: 15,
-    borderRadius: 12,
+    width: (width - (spacing.lg * 2) - spacing.md) / 2,
+    borderRadius: borderRadius.xl,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
   },
   quickActionGradient: {
-    padding: 16,
-    minHeight: 120,
+    padding: spacing.lg,
+    minHeight: 140,
+    justifyContent: 'space-between',
   },
-  quickActionContent: {
+  quickActionHeader: {
+    alignItems: 'flex-start',
+  },
+  quickActionFooter: {
     alignItems: 'flex-start',
   },
   quickActionTitle: {
+    ...typography.headline,
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 8,
+    fontWeight: '700',
+    marginTop: spacing.sm,
   },
   quickActionSubtitle: {
+    ...typography.caption1,
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   creditsRequired: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignSelf: 'flex-start',
   },
   creditsRequiredText: {
+    ...typography.caption2,
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontWeight: '700',
+    marginLeft: 2,
   },
   recentSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   projectCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm,
   },
   projectThumbnail: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   projectInfo: {
     flex: 1,
   },
   projectName: {
-    fontSize: 16,
+    ...typography.callout,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: spacing.xs,
   },
   projectPlatforms: {
-    fontSize: 14,
-    marginBottom: 2,
+    ...typography.caption1,
+    marginBottom: spacing.xs,
   },
   projectStatus: {
-    fontSize: 12,
+    ...typography.caption2,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   statsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginHorizontal: 4,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 8,
+    ...typography.title1,
+    fontWeight: '800',
+    marginTop: spacing.sm,
   },
   statLabel: {
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.caption1,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
 });

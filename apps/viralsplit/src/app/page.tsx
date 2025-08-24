@@ -62,7 +62,8 @@ export default function Home() {
     setTransformationStatus(initialStatus);
     
     try {
-      const response = await fetch('/api/projects/' + projectId + '/transform', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+      const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/transform`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ export default function Home() {
             setStep('complete');
             setIsTransforming(false);
             // Poll backend for actual URLs
-            fetch('/api/projects/' + projectId + '/status', {
+            fetch(`${API_BASE_URL}/api/projects/${projectId}/status`, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
               }

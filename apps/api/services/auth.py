@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, EmailStr
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 
@@ -146,12 +146,14 @@ class AuthService:
         user = users_db[user_id]
         return User(**{k: v for k, v in user.items() if k != 'password_hash'})
     
-    async def get_current_user_optional(self, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[User]:
+    async def get_current_user_optional(self, request: Request) -> Optional[User]:
         """Get current authenticated user (optional - returns None if not authenticated)"""
         try:
-            if not credentials:
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
                 return None
-            token = credentials.credentials
+            
+            token = auth_header.replace('Bearer ', '')
             payload = self.verify_jwt_token(token)
             
             user_id = payload.get('user_id')

@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
-
 interface CustomAlertProps {
   visible: boolean;
   title: string;
@@ -39,7 +37,6 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
   primaryButton,
   secondaryButton,
 }) => {
-  const { colors } = useTheme();
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {

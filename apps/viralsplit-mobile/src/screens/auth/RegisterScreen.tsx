@@ -180,6 +180,7 @@ const RegisterScreen: React.FC = () => {
   };
 
   return (
+    <>
     <LinearGradient
       colors={[colors.secondary, colors.primary]}
       style={styles.container}
@@ -428,17 +429,19 @@ const RegisterScreen: React.FC = () => {
             </View>
           </ScrollView>
 
-        <CustomAlert
-          visible={alertState.visible}
-          title={alertState.title}
-          message={alertState.message}
-          type={alertState.type}
-          onDismiss={hideAlert}
-          primaryButton={alertState.primaryButton}
-          secondaryButton={alertState.secondaryButton}
-        />
       </SafeAreaView>
     </LinearGradient>
+
+    <CustomAlert
+      visible={alertState.visible}
+      title={alertState.title}
+      message={alertState.message}
+      type={alertState.type}
+      onDismiss={hideAlert}
+      primaryButton={alertState.primaryButton}
+      secondaryButton={alertState.secondaryButton}
+    />
+  </>
   );
 };
 

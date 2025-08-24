@@ -84,6 +84,7 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
+    <>
     <LinearGradient
       colors={[colors.primary, colors.secondary]}
       style={styles.container}
@@ -215,17 +216,19 @@ const LoginScreen: React.FC = () => {
             </View>
           </View>
 
-        <CustomAlert
-          visible={alertState.visible}
-          title={alertState.title}
-          message={alertState.message}
-          type={alertState.type}
-          onDismiss={hideAlert}
-          primaryButton={alertState.primaryButton}
-          secondaryButton={alertState.secondaryButton}
-        />
       </SafeAreaView>
     </LinearGradient>
+
+    <CustomAlert
+      visible={alertState.visible}
+      title={alertState.title}
+      message={alertState.message}
+      type={alertState.type}
+      onDismiss={hideAlert}
+      primaryButton={alertState.primaryButton}
+      secondaryButton={alertState.secondaryButton}
+    />
+  </>
   );
 };
 

@@ -32,7 +32,7 @@ class SocialAuthService {
       const codeChallenge = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         Math.random().toString(36).substring(2, 15),
-        { encoding: Crypto.CryptoEncoding.BASE64URL }
+        { encoding: Crypto.CryptoEncoding.BASE64 }
       );
 
       // Configure Google OAuth request
@@ -45,7 +45,6 @@ class SocialAuthService {
         responseType: AuthSession.ResponseType.Code,
         codeChallenge,
         codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
-        additionalParameters: {},
         extraParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -69,8 +68,7 @@ class SocialAuthService {
             clientId: request.clientId!,
             code: result.params.code,
             redirectUri: socialAuthConfig.redirectUri,
-            codeVerifier: codeChallenge,
-          },
+                      },
           discovery
         );
 
@@ -202,7 +200,7 @@ class SocialAuthService {
       const codeChallenge = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         Math.random().toString(36).substring(2, 15),
-        { encoding: Crypto.CryptoEncoding.BASE64URL }
+        { encoding: Crypto.CryptoEncoding.BASE64 }
       );
 
       const request = new AuthSession.AuthRequest({
@@ -214,7 +212,6 @@ class SocialAuthService {
         responseType: AuthSession.ResponseType.Code,
         codeChallenge,
         codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
-        additionalParameters: {},
       });
 
       const discovery = {
@@ -231,8 +228,7 @@ class SocialAuthService {
             clientId: request.clientId!,
             code: result.params.code,
             redirectUri: socialAuthConfig.redirectUri,
-            codeVerifier: codeChallenge,
-          },
+                      },
           discovery
         );
 

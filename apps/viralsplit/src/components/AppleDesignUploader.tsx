@@ -55,7 +55,9 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const response = await fetch('/api/upload/youtube', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+      
+      const response = await fetch(`${API_BASE_URL}/api/upload/youtube`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
@@ -116,7 +118,9 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const response = await fetch('/api/upload/request', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+      
+      const response = await fetch(`${API_BASE_URL}/api/upload/request`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
@@ -139,7 +143,9 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
 
       setUploadState({ status: 'processing', progress: 100, projectId: project_id });
       
-      const processResponse = await fetch(`/api/projects/${project_id}/complete-upload`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+      
+      const processResponse = await fetch(`${API_BASE_URL}/api/upload/complete/${project_id}`, {
         method: 'POST'
       });
 

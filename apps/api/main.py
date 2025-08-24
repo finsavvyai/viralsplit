@@ -1140,6 +1140,49 @@ def transform_video_task(self, project_id: str, platforms: List[str], options: d
         self.update_state(state='FAILURE', meta={'error': str(e)})
         raise e
 
+@celery_app.task(bind=True)
+def process_youtube_task(self, project_id: str, youtube_url: str, user_id: str, is_trial: bool = False):
+    """Background task for processing YouTube videos"""
+    try:
+        # Get project from database
+        project = projects_db.get(project_id)
+        if not project:
+            raise Exception(f"Project {project_id} not found")
+        
+        # Update progress
+        self.update_state(state='PROGRESS', meta={'progress': 10})
+        
+        # Simulate YouTube video processing
+        import time
+        time.sleep(2)  # Simulate processing time
+        
+        # Update progress
+        self.update_state(state='PROGRESS', meta={'progress': 50})
+        
+        # For now, just mark as ready for transformation
+        project["status"] = "ready_for_processing"
+        project["youtube_url"] = youtube_url
+        project["processed_at"] = time.time()
+        
+        # Update progress
+        self.update_state(state='PROGRESS', meta={'progress': 100})
+        
+        return {
+            "status": "ready_for_processing",
+            "youtube_url": youtube_url,
+            "message": "YouTube video processed successfully"
+        }
+        
+    except Exception as e:
+        # Update project status to failed
+        if project_id in projects_db:
+            projects_db[project_id]["status"] = "failed"
+            projects_db[project_id]["error"] = str(e)
+        
+        # Update task state with error
+        self.update_state(state='FAILURE', meta={'error': str(e)})
+        raise e
+
 # ============================================================================
 # AI SCRIPT WRITER API ENDPOINTS
 # ============================================================================

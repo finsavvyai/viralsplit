@@ -40,7 +40,9 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    console.log('CustomAlert visibility changed:', visible);
     if (visible) {
+      console.log('CustomAlert showing:', { title, message, type });
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 100,

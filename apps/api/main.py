@@ -39,15 +39,8 @@ app = FastAPI(
 # CORS for both domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://viralsplit.io",
-        "https://contentmulti.com", 
-        "https://viralsplit.vercel.app",
-        "https://viralsplit-*.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:3001"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for now
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

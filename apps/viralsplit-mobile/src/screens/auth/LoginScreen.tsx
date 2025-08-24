@@ -89,10 +89,6 @@ const LoginScreen: React.FC = () => {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
           <View style={styles.content}>
             {/* Logo/Header */}
             <View style={styles.header}>
@@ -218,8 +214,7 @@ const LoginScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-        
+
         <CustomAlert
           visible={alertState.visible}
           title={alertState.title}
@@ -239,9 +234,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
-    flex: 1,
-  },
-  keyboardAvoid: {
     flex: 1,
   },
   content: {

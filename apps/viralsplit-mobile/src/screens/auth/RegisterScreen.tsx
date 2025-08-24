@@ -98,13 +98,35 @@ const RegisterScreen: React.FC = () => {
       showSuccess('Account Created!', 'Welcome to ViralSplit! Your account has been created successfully.');
     } catch (error: any) {
       let errorMessage = 'Failed to create account';
-      const errorDetail = error.response?.data?.detail || error.message;
       
-      if (errorDetail?.includes('already exists') || errorDetail?.includes('User already exists')) {
-        errorMessage = 'An account with this email already exists. Please try signing in instead.';
-      } else if (errorDetail) {
-        errorMessage = errorDetail;
+      // Handle different error structures
+      if (error?.response?.data?.detail) {
+        // Direct Axios error
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail) && detail[0]?.msg) {
+          // Validation error array
+          errorMessage = detail[0].msg;
+        }
+      } else if (typeof error === 'string') {
+        // String error
+        errorMessage = error;
+      } else if (error?.message?.includes('400')) {
+        // Status code 400 errors
+        if (error.code === 'ERR_BAD_REQUEST') {
+          // For status 400, this is most likely "User already exists"
+          errorMessage = 'An account with this email already exists. Please try signing in instead.';
+        } else {
+          errorMessage = 'Please check your information and try again.';
+        }
+      } else if (error?.message?.includes('422')) {
+        // Status code 422 errors (validation)
+        errorMessage = 'Please check your information and try again.';
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
+      
       showError('Registration Failed', errorMessage);
     } finally {
       setIsLoading(false);

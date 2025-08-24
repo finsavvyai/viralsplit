@@ -6,6 +6,7 @@ import { wsClient } from '../lib/websocket-client';
 
 interface VideoUploaderProps {
   onUploadComplete: (projectId: string) => void;
+  onAuthRequired?: () => void;
 }
 
 interface UploadState {
@@ -15,7 +16,7 @@ interface UploadState {
   projectId?: string;
 }
 
-export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete }) => {
+export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onAuthRequired }) => {
   const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle', progress: 0 });
   const [dragActive, setDragActive] = useState(false);
   const [inputMode, setInputMode] = useState<'file' | 'url'>('file');
@@ -40,11 +41,24 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
 
   const uploadFromUrl = async (url: string) => {
     try {
+      // Check authentication
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        if (onAuthRequired) {
+          onAuthRequired();
+        }
+        setUploadState({ status: 'error', progress: 0, error: 'Please sign in to upload videos' });
+        return;
+      }
+
       setUploadState({ status: 'uploading', progress: 15 });
 
       const response = await fetch('/api/upload/youtube', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify({ url, agreed_to_terms: agreedToTerms })
       });
 
@@ -85,11 +99,24 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
 
   const uploadFromFile = async (file: File) => {
     try {
+      // Check authentication
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        if (onAuthRequired) {
+          onAuthRequired();
+        }
+        setUploadState({ status: 'error', progress: 0, error: 'Please sign in to upload videos' });
+        return;
+      }
+
       setUploadState({ status: 'uploading', progress: 0 });
 
       const response = await fetch('/api/upload/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify({ filename: file.name, size: file.size, type: file.type })
       });
 

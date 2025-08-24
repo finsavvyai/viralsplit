@@ -46,7 +46,8 @@ class APIService {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('API Error:', error.response?.data || error.message);
+        // Temporarily disable console.error to see if it's causing Toast
+        // console.error('API Error:', error.response?.data || error.message);
         return Promise.reject(error);
       }
     );

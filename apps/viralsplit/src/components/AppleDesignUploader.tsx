@@ -74,7 +74,10 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
       const { project_id } = await response.json();
       
       // Connect WebSocket for real-time updates
-      wsClient.connect(project_id, (update) => {
+      const ws = new WebSocket(`wss://api.viralsplit.io/ws/${project_id}`);
+      
+      ws.onmessage = (event) => {
+        const update = JSON.parse(event.data);
         setUploadState({
           status: update.status,
           progress: update.progress,
@@ -87,9 +90,19 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
           // Haptic-like delay before completion
           setTimeout(() => {
             onUploadComplete(project_id, isTrial);
+            ws.close();
           }, 500);
         }
-      });
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setUploadState({
+          status: 'error',
+          progress: 0,
+          error: 'Connection error'
+        });
+      };
 
     } catch (error) {
       console.error('URL processing error:', error);

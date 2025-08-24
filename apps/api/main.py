@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
@@ -80,6 +80,28 @@ class SocialAccountRequest(BaseModel):
 
 # In-memory project store (replace with database in production)
 projects_db = {}
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, project_id: str):
+        await websocket.accept()
+        self.active_connections[project_id] = websocket
+
+    def disconnect(self, project_id: str):
+        if project_id in self.active_connections:
+            del self.active_connections[project_id]
+
+    async def send_progress(self, project_id: str, data: dict):
+        if project_id in self.active_connections:
+            try:
+                await self.active_connections[project_id].send_json(data)
+            except:
+                self.disconnect(project_id)
+
+manager = ConnectionManager()
 
 # Application start time for metrics
 start_time = time.time()
@@ -380,21 +402,22 @@ async def upload_from_youtube(
             "is_trial": user is None
         }
         
-        # For now, process YouTube video synchronously to avoid Celery issues
-        import time
+        # Start background task to process YouTube video
+        task = celery_app.send_task('main.process_youtube_task', kwargs={
+            'project_id': project_id,
+            'youtube_url': request.url,
+            'user_id': user_id,
+            'is_trial': user is None
+        })
         
-        # Simulate processing
-        time.sleep(1)
-        
-        # Update project status
-        projects_db[project_id]["status"] = "ready_for_processing"
-        projects_db[project_id]["youtube_url"] = request.url
-        projects_db[project_id]["processed_at"] = time.time()
+        # Update project with task ID
+        projects_db[project_id]["task_id"] = task.id
         
         return {
             "project_id": project_id,
-            "status": "complete",
-            "message": "YouTube video processed successfully"
+            "task_id": task.id,
+            "status": "processing",
+            "message": "YouTube video processing started"
         }
     
     except HTTPException:
@@ -1148,23 +1171,53 @@ def process_youtube_task(self, project_id: str, youtube_url: str, user_id: str, 
         if not project:
             raise Exception(f"Project {project_id} not found")
         
-        # Update progress
-        self.update_state(state='PROGRESS', meta={'progress': 10})
+        # Update progress via WebSocket
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
-        # Simulate YouTube video processing
-        import time
-        time.sleep(2)  # Simulate processing time
-        
-        # Update progress
-        self.update_state(state='PROGRESS', meta={'progress': 50})
-        
-        # For now, just mark as ready for transformation
-        project["status"] = "ready_for_processing"
-        project["youtube_url"] = youtube_url
-        project["processed_at"] = time.time()
-        
-        # Update progress
-        self.update_state(state='PROGRESS', meta={'progress': 100})
+        try:
+            # Send initial progress
+            loop.run_until_complete(manager.send_progress(project_id, {
+                "status": "processing",
+                "progress": 10,
+                "message": "Starting YouTube video processing..."
+            }))
+            
+            # Simulate processing steps
+            import time
+            time.sleep(1)
+            
+            loop.run_until_complete(manager.send_progress(project_id, {
+                "status": "processing",
+                "progress": 30,
+                "message": "Downloading video from YouTube..."
+            }))
+            
+            time.sleep(1)
+            
+            loop.run_until_complete(manager.send_progress(project_id, {
+                "status": "processing",
+                "progress": 60,
+                "message": "Analyzing video content..."
+            }))
+            
+            time.sleep(1)
+            
+            # Mark as ready for transformation
+            project["status"] = "ready_for_processing"
+            project["youtube_url"] = youtube_url
+            project["processed_at"] = time.time()
+            
+            # Send completion
+            loop.run_until_complete(manager.send_progress(project_id, {
+                "status": "complete",
+                "progress": 100,
+                "message": "YouTube video processed successfully"
+            }))
+            
+        finally:
+            loop.close()
         
         return {
             "status": "ready_for_processing",
@@ -1178,9 +1231,36 @@ def process_youtube_task(self, project_id: str, youtube_url: str, user_id: str, 
             projects_db[project_id]["status"] = "failed"
             projects_db[project_id]["error"] = str(e)
         
+        # Send error via WebSocket
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(manager.send_progress(project_id, {
+                "status": "error",
+                "progress": 0,
+                "error": str(e)
+            }))
+            loop.close()
+        except:
+            pass
+        
         # Update task state with error
         self.update_state(state='FAILURE', meta={'error': str(e)})
         raise e
+
+# ===== WEBSOCKET ENDPOINTS =====
+
+@app.websocket("/ws/{project_id}")
+async def websocket_endpoint(websocket: WebSocket, project_id: str):
+    """WebSocket endpoint for real-time progress updates"""
+    await manager.connect(websocket, project_id)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(project_id)
 
 # ============================================================================
 # AI SCRIPT WRITER API ENDPOINTS

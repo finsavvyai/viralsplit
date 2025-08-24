@@ -42,6 +42,8 @@ app.add_middleware(
     allow_origins=[
         "https://viralsplit.io",
         "https://contentmulti.com", 
+        "https://viralsplit.vercel.app",
+        "https://viralsplit-*.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001"
     ],

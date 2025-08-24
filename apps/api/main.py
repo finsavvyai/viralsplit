@@ -149,6 +149,50 @@ async def get_current_user(user: User = Depends(auth_service.get_current_user)):
     """Get current user information"""
     return {"user": user}
 
+@app.post("/api/auth/social-login")
+async def social_login(request: dict):
+    """🔐 Social Authentication - Login/Register with Google, Apple, Twitter"""
+    try:
+        provider = request.get('provider')
+        provider_id = request.get('provider_id')
+        email = request.get('email')
+        name = request.get('name')
+        picture = request.get('picture')
+        
+        if not provider or not provider_id:
+            raise HTTPException(status_code=400, detail="Provider and provider_id are required")
+        
+        # For demo purposes, create a simple social user
+        # In production, you'd validate the tokens with the social provider
+        user_data = {
+            "id": f"social_{provider}_{provider_id}",
+            "email": email or f"{provider}_{provider_id}@viralsplit.io",
+            "brand": "viralsplit",
+            "subscription_tier": "free",
+            "subscription_status": "active",
+            "credits": 100,
+            "created_at": datetime.now().isoformat() + "Z",
+            "updated_at": datetime.now().isoformat() + "Z",
+            "username": name or f"{provider}_user",
+            "profile_image": picture
+        }
+        
+        # Create access token
+        token_data = {"user_id": user_data["id"], "email": user_data["email"]}
+        access_token = auth_service.create_access_token(data=token_data)
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user_data
+        }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Social login error: {e}")
+        raise HTTPException(status_code=500, detail=f"Social authentication failed: {str(e)}")
+
 # ===== SOCIAL ACCOUNT MANAGEMENT =====
 
 @app.post("/api/auth/social/connect")
@@ -1820,19 +1864,26 @@ async def get_trending_adaptations(
     """🔥 Get current trending formats and adaptations for content"""
     try:
         # Get trending data from content remixer
+        print(f"DEBUG: content_remixer type: {type(content_remixer)}")
+        print(f"DEBUG: content_remixer methods: {[m for m in dir(content_remixer) if 'trending' in m.lower()]}")
         trending_data = await content_remixer.get_trending_adaptations(platform, content_type)
+        
+        if not trending_data.get("success"):
+            raise HTTPException(status_code=500, detail=trending_data.get("message", "Failed to get trending data"))
+        
+        platform_data = trending_data.get("trending_data", {})
         
         return {
             "success": True,
-            "trending_adaptations": trending_data["adaptations"],
-            "trending_sounds": trending_data.get("sounds", []),
-            "viral_formats": trending_data.get("formats", []),
-            "hashtag_clusters": trending_data.get("hashtags", []),
-            "engagement_patterns": trending_data.get("patterns", {}),
+            "trending_adaptations": platform_data.get("trending_sounds", []),
+            "trending_sounds": platform_data.get("trending_sounds", []),
+            "viral_formats": platform_data.get("trending_effects", []),
+            "hashtag_clusters": platform_data.get("trending_hashtags", []),
+            "engagement_patterns": platform_data.get("trending_challenges", []),
             "platform": platform,
             "content_type": content_type,
-            "last_updated": trending_data.get("updated_at"),
-            "message": f"Found {len(trending_data['adaptations'])} trending adaptations"
+            "last_updated": trending_data.get("retrieved_at"),
+            "message": f"Found trending adaptations for {platform}"
         }
         
     except Exception as e:

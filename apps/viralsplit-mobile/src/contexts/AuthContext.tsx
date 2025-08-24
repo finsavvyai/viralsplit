@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username: string) => Promise<void>;
+  socialLogin: (token: string, userData: User) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -38,6 +39,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await dispatch(registerUser({ email, password, username })).unwrap();
   };
 
+  const socialLogin = async (token: string, userData: User): Promise<void> => {
+    const { setSocialAuth } = await import('@/store/slices/authSlice');
+    await dispatch(setSocialAuth({ token, user: userData })).unwrap();
+  };
+
   const logout = async (): Promise<void> => {
     const { logoutUser } = await import('@/store/slices/authSlice');
     await dispatch(logoutUser()).unwrap();
@@ -54,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    socialLogin,
     logout,
     refreshUser,
   };

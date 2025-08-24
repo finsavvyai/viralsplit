@@ -5,8 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -17,6 +15,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { socialAuthService } from '@/services/socialAuth';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -28,8 +29,9 @@ type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const { login } = useAuth();
+  const { login, socialLogin } = useAuth();
   const { colors } = useTheme();
+  const { alertState, showError, showSuccess, hideAlert } = useCustomAlert();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,12 +40,12 @@ const LoginScreen: React.FC = () => {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+      showError('Missing Information', 'Please enter both email and password');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showError('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
@@ -51,14 +53,34 @@ const LoginScreen: React.FC = () => {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid email or password');
+      const errorDetail = error.response?.data?.detail || error.message;
+      showError('Login Failed', errorDetail || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert('Coming Soon', `${provider} login will be available soon!`);
+  const handleSocialLogin = async (provider: 'google' | 'apple' | 'twitter') => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await socialAuthService.authenticateWithProvider(provider);
+      
+      if (result.success && result.user && result.token) {
+        // Use the social login method instead of regular login
+        await socialLogin(result.token, result.user);
+        showSuccess('Welcome!', `Welcome ${result.user.username || result.user.email}!`);
+      } else {
+        showError('Authentication Failed', result.error || 'Please try again');
+      }
+    } catch (error: any) {
+      console.error(`${provider} auth error:`, error);
+      const errorDetail = error.response?.data?.detail || error.message;
+      showError('Authentication Error', errorDetail || `${provider} login failed`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -151,24 +173,39 @@ const LoginScreen: React.FC = () => {
 
               <View style={styles.socialButtons}>
                 <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLogin('Google')}
+                  style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                  onPress={() => handleSocialLogin('google')}
+                  disabled={isLoading}
                 >
-                  <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+                  )}
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLogin('Apple')}
+                  style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                  onPress={() => handleSocialLogin('apple')}
+                  disabled={isLoading}
                 >
-                  <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+                  )}
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLogin('Twitter')}
+                  style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                  onPress={() => handleSocialLogin('twitter')}
+                  disabled={isLoading}
                 >
-                  <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -182,6 +219,16 @@ const LoginScreen: React.FC = () => {
             </View>
           </View>
         </KeyboardAvoidingView>
+        
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+          onDismiss={hideAlert}
+          primaryButton={alertState.primaryButton}
+          secondaryButton={alertState.secondaryButton}
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -301,6 +348,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
   },
   footer: {
     flexDirection: 'row',

@@ -47,6 +47,18 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+export const setSocialAuth = createAsyncThunk(
+  'auth/setSocialAuth',
+  async ({ token, user }: { token: string; user: User }) => {
+    // Store the token and user data
+    await AsyncStorage.multiSet([
+      ['auth_token', token],
+      ['user', JSON.stringify(user)]
+    ]);
+    return { token, user };
+  }
+);
+
 // Initial state
 const initialState: AuthState = {
   user: null,
@@ -85,6 +97,11 @@ const authSlice = createSlice({
         state.token = action.payload.access_token;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        // Store to AsyncStorage
+        AsyncStorage.multiSet([
+          ['auth_token', action.payload.access_token],
+          ['user', JSON.stringify(action.payload.user)]
+        ]);
       })
       .addCase(loginUser.rejected, (state) => {
         state.isLoading = false;
@@ -103,6 +120,11 @@ const authSlice = createSlice({
         state.token = action.payload.access_token;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        // Store to AsyncStorage
+        AsyncStorage.multiSet([
+          ['auth_token', action.payload.access_token],
+          ['user', JSON.stringify(action.payload.user)]
+        ]);
       })
       .addCase(registerUser.rejected, (state) => {
         state.isLoading = false;
@@ -138,6 +160,24 @@ const authSlice = createSlice({
     // Logout
     builder
       .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+      });
+
+    // Social Auth
+    builder
+      .addCase(setSocialAuth.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(setSocialAuth.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.token = action.payload.token;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(setSocialAuth.rejected, (state) => {
+        state.isLoading = false;
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;

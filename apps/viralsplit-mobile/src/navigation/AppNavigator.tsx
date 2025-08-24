@@ -27,7 +27,7 @@ const AppNavigator: React.FC = () => {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       ) : !isAuthenticated ? (
         <Stack.Screen 
-          name="Login" 
+          name="Auth" 
           component={AuthNavigator}
           options={{ animationTypeForReplace: 'pop' }}
         />

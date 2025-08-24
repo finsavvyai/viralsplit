@@ -146,15 +146,7 @@ const MainNavigator: React.FC = () => {
       {/* Main Tab Navigator */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
       
-      {/* Camera Flow */}
-      <Stack.Screen 
-        name="Camera" 
-        component={CameraScreen}
-        options={{ 
-          presentation: 'modal',
-          cardStyle: { backgroundColor: '#000' }
-        }}
-      />
+      {/* Camera Flow - Removed duplicate Camera screen as it's already in tabs */}
       <Stack.Screen 
         name="VideoReview" 
         component={VideoReviewScreen}

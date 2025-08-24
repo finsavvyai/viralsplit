@@ -1,35 +1,56 @@
 services:
+  # API Service
   - type: web
     name: viralsplit-api
     env: python
-    buildCommand: pip install -r apps/api/requirements.production.txt
-    startCommand: cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
+    plan: free
+    buildCommand: pip install -r apps/api/requirements.txt
+    startCommand: cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRATION_HOURS
+        value: 24
       - key: CLOUDFLARE_ACCOUNT_ID
-        value: your_account_id
+        sync: false
       - key: CLOUDFLARE_ACCESS_KEY_ID
-        value: your_access_key_id
+        sync: false
       - key: CLOUDFLARE_SECRET_ACCESS_KEY
-        value: your_secret_access_key
+        sync: false
       - key: CDN_DOMAIN
         value: cdn.viralsplit.io
-      - key: JWT_SECRET
-        generateValue: true
+      - key: R2_BUCKET_NAME
+        value: viralsplit-media
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: LEMONSQUEEZY_API_KEY
+        sync: false
+      - key: LEMONSQUEEZY_WEBHOOK_SECRET
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: viralsplit-redis
+          property: connectionString
+      - key: DEBUG
+        value: false
       - key: ENVIRONMENT
         value: production
 
+  # Redis Service
   - type: redis
     name: viralsplit-redis
-    ipAllowList: []
-
-  - type: worker
-    name: viralsplit-worker
-    env: python
-    buildCommand: pip install -r apps/api/requirements.production.txt
-    startCommand: cd apps/api && celery -A main.celery_app worker --loglevel=info
-    envVars:
-      - key: REDIS_URL
-        fromService:
-          name: viralsplit-redis
-          type: redis
-          property: connectionString
+    plan: free
+    maxmemoryPolicy: allkeys-lru

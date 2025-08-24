@@ -1,14 +1,11 @@
 import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '@/contexts/ThemeContext';
 
 const LoadingScreen: React.FC = () => {
-  const { colors } = useTheme();
-
   return (
     <LinearGradient 
-      colors={[colors.primary, colors.secondary]} 
+      colors={['#6366f1', '#8b5cf6']} 
       style={styles.container}
     >
       <View style={styles.content}>

@@ -179,9 +179,7 @@ export interface PushNotification {
 export type RootStackParamList = {
   // Auth Flow
   Onboarding: undefined;
-  Login: undefined;
-  Register: undefined;
-  ForgotPassword: undefined;
+  Auth: undefined;
   
   // Main App
   MainTabs: undefined;

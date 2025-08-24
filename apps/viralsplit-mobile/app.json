@@ -51,6 +51,7 @@
       "expo-camera",
       "expo-media-library",
       "expo-notifications",
+      "expo-apple-authentication",
       [
         "expo-av",
         {
@@ -66,9 +67,8 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "viralsplit-mobile-2024"
       }
     },
-    "owner": "viralsplit"
+    "owner": "finsavvyai"
   }
 }

@@ -1108,6 +1108,80 @@ class ContentRemixer:
             {'platform': 'instagram', 'caption': 'Instagram style caption'}
         ]
 
+    async def get_trending_adaptations(self, platform: str, content_type: str = "video") -> Dict:
+        """Get trending adaptations for a specific platform and content type"""
+        try:
+            # Mock trending data - in production this would fetch from real APIs
+            trending_adaptations = {
+                'tiktok': {
+                    'trending_sounds': [
+                        {'name': 'Viral Beat 2024', 'usage_count': 1500000, 'category': 'music'},
+                        {'name': 'Trending Audio', 'usage_count': 890000, 'category': 'voice'}
+                    ],
+                    'trending_effects': [
+                        {'name': 'Glitch Effect', 'usage_count': 450000, 'category': 'visual'},
+                        {'name': 'Neon Glow', 'usage_count': 320000, 'category': 'filter'}
+                    ],
+                    'trending_challenges': [
+                        {'name': 'Dance Challenge', 'participants': 250000, 'category': 'dance'},
+                        {'name': 'Lip Sync Battle', 'participants': 180000, 'category': 'music'}
+                    ],
+                    'trending_hashtags': [
+                        {'tag': '#fyp', 'posts': 50000000, 'category': 'general'},
+                        {'tag': '#viral', 'posts': 25000000, 'category': 'general'},
+                        {'tag': '#trending', 'posts': 15000000, 'category': 'general'}
+                    ]
+                },
+                'instagram': {
+                    'trending_filters': [
+                        {'name': 'Vintage Filter', 'usage_count': 890000, 'category': 'aesthetic'},
+                        {'name': 'Bold Colors', 'usage_count': 650000, 'category': 'color'}
+                    ],
+                    'trending_music': [
+                        {'name': 'Instagram Hit', 'usage_count': 1200000, 'category': 'music'},
+                        {'name': 'Trending Song', 'usage_count': 980000, 'category': 'music'}
+                    ],
+                    'trending_hashtags': [
+                        {'tag': '#instagram', 'posts': 30000000, 'category': 'platform'},
+                        {'tag': '#reels', 'posts': 20000000, 'category': 'format'},
+                        {'tag': '#viral', 'posts': 18000000, 'category': 'general'}
+                    ]
+                },
+                'youtube': {
+                    'trending_topics': [
+                        {'name': 'Tech Reviews', 'views': 50000000, 'category': 'technology'},
+                        {'name': 'Gaming Content', 'views': 45000000, 'category': 'gaming'}
+                    ],
+                    'trending_thumbnails': [
+                        {'style': 'Bold Text', 'usage_count': 1200000, 'category': 'design'},
+                        {'style': 'Face Reactions', 'usage_count': 980000, 'category': 'expression'}
+                    ],
+                    'trending_hashtags': [
+                        {'tag': '#youtube', 'posts': 25000000, 'category': 'platform'},
+                        {'tag': '#shorts', 'posts': 15000000, 'category': 'format'},
+                        {'tag': '#viral', 'posts': 12000000, 'category': 'general'}
+                    ]
+                }
+            }
+            
+            platform_data = trending_adaptations.get(platform.lower(), {})
+            
+            return {
+                'success': True,
+                'platform': platform,
+                'content_type': content_type,
+                'trending_data': platform_data,
+                'retrieved_at': datetime.now().isoformat(),
+                'message': f'Retrieved trending adaptations for {platform}'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'Failed to get trending adaptations for {platform}'
+            }
+
 # Initialize the content remixer
 content_remixer = ContentRemixer()
 

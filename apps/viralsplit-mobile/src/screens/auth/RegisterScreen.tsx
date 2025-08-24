@@ -5,8 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   ScrollView,
@@ -18,6 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
+import { socialAuthService } from '@/services/socialAuth';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -29,8 +30,9 @@ type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Reg
 
 const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
-  const { register } = useAuth();
+  const { register, socialLogin } = useAuth();
   const { colors } = useTheme();
+  const { alertState, showError, showSuccess, hideAlert } = useCustomAlert();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -51,32 +53,32 @@ const RegisterScreen: React.FC = () => {
     const { username, email, password, confirmPassword } = formData;
     
     if (!username.trim()) {
-      Alert.alert('Error', 'Please enter a username');
+      showError('Missing Username', 'Please enter a username');
       return false;
     }
     
     if (username.trim().length < 3) {
-      Alert.alert('Error', 'Username must be at least 3 characters long');
+      showError('Username Too Short', 'Username must be at least 3 characters long');
       return false;
     }
     
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showError('Invalid Email', 'Please enter a valid email address');
       return false;
     }
     
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      showError('Password Too Short', 'Password must be at least 8 characters long');
       return false;
     }
     
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showError('Password Mismatch', 'Passwords do not match');
       return false;
     }
     
     if (!acceptedTerms) {
-      Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
+      showError('Terms Required', 'Please accept the Terms of Service and Privacy Policy');
       return false;
     }
     
@@ -93,15 +95,49 @@ const RegisterScreen: React.FC = () => {
         formData.password,
         formData.username.trim()
       );
+      showSuccess('Account Created!', 'Welcome to ViralSplit! Your account has been created successfully.');
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'Failed to create account');
+      let errorMessage = 'Failed to create account';
+      const errorDetail = error.response?.data?.detail || error.message;
+      
+      if (errorDetail?.includes('already exists') || errorDetail?.includes('User already exists')) {
+        errorMessage = 'An account with this email already exists. Please try signing in instead.';
+      } else if (errorDetail) {
+        errorMessage = errorDetail;
+      }
+      showError('Registration Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialSignUp = (provider: string) => {
-    Alert.alert('Coming Soon', `${provider} registration will be available soon!`);
+  const handleSocialSignUp = async (provider: 'google' | 'apple' | 'twitter') => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await socialAuthService.authenticateWithProvider(provider);
+      
+      if (result.success && result.user && result.token) {
+        await socialLogin(result.token, result.user);
+        showSuccess('Account Created!', `Welcome ${result.user.username || result.user.email}! Your account has been created successfully.`);
+      } else {
+        showError('Registration Failed', result.error || 'Please try again');
+      }
+    } catch (error: any) {
+      console.error(`${provider} signup error:`, error);
+      let errorMessage = `${provider} registration failed`;
+      const errorDetail = error.response?.data?.detail || error.message;
+      
+      if (errorDetail?.includes('already exists') || errorDetail?.includes('User already exists')) {
+        errorMessage = 'An account with this email already exists. Please try signing in instead.';
+      } else if (errorDetail) {
+        errorMessage = errorDetail;
+      }
+      showError('Registration Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -110,11 +146,13 @@ const RegisterScreen: React.FC = () => {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
         >
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
               {/* Header */}
               <View style={styles.header}>
@@ -212,6 +250,7 @@ const RegisterScreen: React.FC = () => {
                 {/* Password Requirements */}
                 <View style={styles.passwordRequirements}>
                   <Text style={styles.requirementsTitle}>Password must contain:</Text>
+                  
                   <View style={styles.requirement}>
                     <Ionicons 
                       name={formData.password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
@@ -222,6 +261,32 @@ const RegisterScreen: React.FC = () => {
                       formData.password.length >= 8 && styles.requirementMet
                     ]}>
                       At least 8 characters
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.requirement}>
+                    <Ionicons 
+                      name={/[A-Z]/.test(formData.password) ? "checkmark-circle" : "ellipse-outline"} 
+                      size={16} 
+                      color={/[A-Z]/.test(formData.password) ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                    />
+                    <Text style={[styles.requirementText, 
+                      /[A-Z]/.test(formData.password) && styles.requirementMet
+                    ]}>
+                      One uppercase letter
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.requirement}>
+                    <Ionicons 
+                      name={/[0-9]/.test(formData.password) ? "checkmark-circle" : "ellipse-outline"} 
+                      size={16} 
+                      color={/[0-9]/.test(formData.password) ? "#10B981" : "rgba(255,255,255,0.5)"} 
+                    />
+                    <Text style={[styles.requirementText, 
+                      /[0-9]/.test(formData.password) && styles.requirementMet
+                    ]}>
+                      One number
                     </Text>
                   </View>
                 </View>
@@ -267,24 +332,39 @@ const RegisterScreen: React.FC = () => {
 
                 <View style={styles.socialButtons}>
                   <TouchableOpacity 
-                    style={styles.socialButton}
-                    onPress={() => handleSocialSignUp('Google')}
+                    style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                    onPress={() => handleSocialSignUp('google')}
+                    disabled={isLoading}
                   >
-                    <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+                    )}
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={styles.socialButton}
-                    onPress={() => handleSocialSignUp('Apple')}
+                    style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                    onPress={() => handleSocialSignUp('apple')}
+                    disabled={isLoading}
                   >
-                    <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+                    )}
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={styles.socialButton}
-                    onPress={() => handleSocialSignUp('Twitter')}
+                    style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                    onPress={() => handleSocialSignUp('twitter')}
+                    disabled={isLoading}
                   >
-                    <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -298,7 +378,16 @@ const RegisterScreen: React.FC = () => {
               </View>
             </View>
           </ScrollView>
-        </KeyboardAvoidingView>
+
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+          onDismiss={hideAlert}
+          primaryButton={alertState.primaryButton}
+          secondaryButton={alertState.secondaryButton}
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -311,22 +400,22 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
   },
   content: {
     paddingHorizontal: 30,
     paddingTop: 20,
-    paddingBottom: 30,
-    minHeight: '100%',
-    justifyContent: 'center',
+    paddingBottom: 20,
+    flex: 1,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 25,
     position: 'relative',
   },
   backButton: {
@@ -366,7 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -381,6 +470,8 @@ const styles = StyleSheet.create({
   },
   passwordRequirements: {
     marginBottom: 20,
+    paddingHorizontal: 4,
+    marginTop: 12,
   },
   requirementsTitle: {
     color: 'rgba(255,255,255,0.8)',
@@ -390,12 +481,15 @@ const styles = StyleSheet.create({
   requirement: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
+    paddingRight: 16,
   },
   requirementText: {
+    flex: 1,
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     marginLeft: 8,
+    flexWrap: 'wrap',
   },
   requirementMet: {
     color: '#10B981',
@@ -465,6 +559,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
   },
   footer: {
     flexDirection: 'row',

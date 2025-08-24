@@ -242,7 +242,7 @@ async def health_check():
 @app.post("/api/upload/request")
 async def request_upload(
     request: UploadRequest,
-    user: User = Depends(auth_service.get_current_user)
+    user: Optional[User] = Depends(auth_service.get_current_user_optional)
 ):
     """Generate presigned URL for direct upload to R2 with user-specific naming"""
     try:
@@ -255,11 +255,22 @@ async def request_upload(
         
         # Generate unique project ID and file key with user info
         project_id = str(uuid.uuid4())
-        file_key = storage_service.generate_unique_key(
-            user_id=user.id,
-            filename=request.filename,
-            file_type='original'
-        )
+        
+        if user:
+            file_key = storage_service.generate_unique_key(
+                user_id=user.id,
+                filename=request.filename,
+                file_type='original'
+            )
+            user_id = user.id
+        else:
+            # Trial user - generate temporary key
+            file_key = storage_service.generate_unique_key(
+                user_id=f"trial_{project_id}",
+                filename=request.filename,
+                file_type='original'
+            )
+            user_id = f"trial_{project_id}"
         
         # Generate presigned URL for direct upload
         upload_url = storage_service.generate_upload_url(file_key, expires_in=3600)
@@ -270,13 +281,14 @@ async def request_upload(
         # Initialize project in database
         projects_db[project_id] = {
             "id": project_id,
-            "user_id": user.id,
+            "user_id": user_id,
             "filename": request.filename,
             "file_key": file_key,
             "file_size": request.file_size,
             "status": "pending_upload",
             "created_at": asyncio.get_event_loop().time(),
-            "transformations": {}
+            "transformations": {},
+            "is_trial": user is None
         }
         
         return {
@@ -293,7 +305,7 @@ async def request_upload(
 @app.post("/api/upload/complete/{project_id}")
 async def complete_upload(
     project_id: str,
-    user: User = Depends(auth_service.get_current_user)
+    user: Optional[User] = Depends(auth_service.get_current_user_optional)
 ):
     """Mark upload as complete and ready for processing"""
     try:
@@ -302,8 +314,16 @@ async def complete_upload(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        if project.get("user_id") != user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        # For trial projects, allow access without user verification
+        if project.get("is_trial"):
+            if user and project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        else:
+            # For regular projects, require user authentication
+            if not user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
         
         # Update project status
         project["status"] = "ready_for_processing"
@@ -320,11 +340,74 @@ async def complete_upload(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload completion failed: {str(e)}")
 
+# YouTube upload endpoint for trial users
+class YouTubeUploadRequest(BaseModel):
+    url: str
+    agreed_to_terms: bool = False
+    is_trial: bool = False
+
+@app.post("/api/upload/youtube")
+async def upload_from_youtube(
+    request: YouTubeUploadRequest,
+    user: Optional[User] = Depends(auth_service.get_current_user_optional)
+):
+    """Process YouTube URL for video transformation"""
+    try:
+        if not request.agreed_to_terms:
+            raise HTTPException(status_code=400, detail="You must agree to the terms of service")
+        
+        # Validate YouTube URL
+        if not request.url.startswith(('https://www.youtube.com/watch?v=', 'https://youtu.be/', 'https://youtube.com/watch?v=')):
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+        
+        # Generate project ID
+        project_id = str(uuid.uuid4())
+        
+        if user:
+            user_id = user.id
+        else:
+            # Trial user
+            user_id = f"trial_{project_id}"
+        
+        # Initialize project
+        projects_db[project_id] = {
+            "id": project_id,
+            "user_id": user_id,
+            "youtube_url": request.url,
+            "status": "processing",
+            "created_at": asyncio.get_event_loop().time(),
+            "transformations": {},
+            "is_trial": user is None
+        }
+        
+        # Start background task to process YouTube video
+        task = celery_app.send_task('main.process_youtube_task', kwargs={
+            'project_id': project_id,
+            'youtube_url': request.url,
+            'user_id': user_id,
+            'is_trial': user is None
+        })
+        
+        # Update project with task ID
+        projects_db[project_id]["task_id"] = task.id
+        
+        return {
+            "project_id": project_id,
+            "task_id": task.id,
+            "status": "processing",
+            "message": "YouTube video processing started"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"YouTube processing failed: {str(e)}")
+
 @app.post("/api/projects/{project_id}/transform")
 async def transform_video(
     project_id: str,
     request: TransformRequest,
-    user: User = Depends(auth_service.get_current_user)
+    user: Optional[User] = Depends(auth_service.get_current_user_optional)
 ):
     """Start video transformation with user authentication"""
     try:
@@ -333,13 +416,21 @@ async def transform_video(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        if project.get("user_id") != user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to access this project")
-        
-        # Check user credits
-        credits_needed = len(request.platforms) * 10  # 10 credits per platform
-        if user.credits < credits_needed:
-            raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {credits_needed}, have {user.credits}")
+        # For trial projects, allow access without user verification
+        if project.get("is_trial"):
+            if user and project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
+        else:
+            # For regular projects, require user authentication
+            if not user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if project.get("user_id") != user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to access this project")
+            
+            # Check user credits (only for authenticated users)
+            credits_needed = len(request.platforms) * 10  # 10 credits per platform
+            if user.credits < credits_needed:
+                raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {credits_needed}, have {user.credits}")
         
         # Update project status
         project["status"] = "processing"
@@ -351,7 +442,8 @@ async def transform_video(
             'project_id': project_id,
             'platforms': request.platforms,
             'options': request.options,
-            'user_id': user.id
+            'user_id': user.id if user else project.get("user_id"),
+            'is_trial': user is None
         })
         
         # Update project with task ID

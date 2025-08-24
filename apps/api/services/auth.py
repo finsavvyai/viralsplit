@@ -146,6 +146,23 @@ class AuthService:
         user = users_db[user_id]
         return User(**{k: v for k, v in user.items() if k != 'password_hash'})
     
+    async def get_current_user_optional(self, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[User]:
+        """Get current authenticated user (optional - returns None if not authenticated)"""
+        try:
+            if not credentials:
+                return None
+            token = credentials.credentials
+            payload = self.verify_jwt_token(token)
+            
+            user_id = payload.get('user_id')
+            if not user_id or user_id not in users_db:
+                return None
+            
+            user = users_db[user_id]
+            return User(**{k: v for k, v in user.items() if k != 'password_hash'})
+        except:
+            return None
+    
     async def connect_social_account(self, user_id: str, social_data: SocialAccount) -> Dict[str, Any]:
         """Connect a social media account to user"""
         account_key = f"{user_id}_{social_data.platform}"

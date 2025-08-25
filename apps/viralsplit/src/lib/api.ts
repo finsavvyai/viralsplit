@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.viralsplit.io';
 
 export interface UploadRequest {
   filename: string;

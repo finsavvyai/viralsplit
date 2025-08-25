@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.viralsplit.io';
 
   // Check for existing token on mount
   useEffect(() => {

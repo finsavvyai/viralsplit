@@ -11,6 +11,6 @@
     }
   },
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://viralspiritio-production.up.railway.app"
+    "NEXT_PUBLIC_API_URL": "https://api.viralsplit.io"
   }
 }

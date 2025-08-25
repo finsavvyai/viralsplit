@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppleDesignUploader } from '../components/AppleDesignUploader';
 import { PlatformSelector } from '../components/PlatformSelector';
-import { EnhancedAuthModal } from '../components/EnhancedAuthModal';
+import { AuthModal } from '../components/AuthModal';
 import { SocialAccountManager } from '../components/SocialAccountManager';
 import { ViralScoreCard } from '../components/ViralScoreCard';
 import { HookSuggestions } from '../components/HookSuggestions';
@@ -33,6 +33,9 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
+  // Add version state
+  const [version, setVersion] = useState<string>("");
+
   const handleUploadComplete = (newProjectId: string, isTrial?: boolean) => {
     setProjectId(newProjectId);
     setStep('configure');
@@ -62,7 +65,7 @@ export default function Home() {
     setTransformationStatus(initialStatus);
     
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.viralsplit.io';
       const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/transform`, {
         method: 'POST',
         headers: { 
@@ -155,6 +158,52 @@ export default function Home() {
     setResults([]);
     setIsTransforming(false);
   };
+
+  // Add useEffect to fetch version
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        console.log('🔍 Fetching version from API...');
+        console.log('🌐 API URL: https://api.viralsplit.io/version');
+        
+        const response = await fetch(`https://api.viralsplit.io/version`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        
+        console.log('📡 Version response status:', response.status);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Version data received:', data);
+        const versionString = `v${data.version}-build${data.build}`;
+        console.log('🏷️ Setting version to:', versionString);
+        setVersion(versionString);
+      } catch (error) {
+        console.error('❌ Failed to fetch version:', error);
+        console.error('🔧 Error details:', {
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        });
+        // Fallback to a hardcoded version based on our current build
+        const fallbackVersion = "v1.0.0-build44";
+        console.log('🔄 Using fallback version:', fallbackVersion);
+        setVersion(fallbackVersion);
+      }
+    };
+    
+    console.log('🚀 Starting version fetch...');
+    fetchVersion();
+  }, []);
 
   const PLATFORMS = [
     {
@@ -801,10 +850,17 @@ export default function Home() {
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Add version to footer */}
+        <div className="text-center text-gray-500 text-sm mt-8">
+          <p>ViralSplit {version || "Loading..."}</p>
+          {/* Debug info - remove in production */}
+          <p style={{fontSize: '10px', opacity: 0.5}}>Debug: Version state = "{version}"</p>
+        </div>
       </div>
 
       {/* Enhanced Auth Modal */}
-      <EnhancedAuthModal
+      <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         defaultMode={authMode}

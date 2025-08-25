@@ -17,7 +17,7 @@ interface UploadState {
 }
 
 export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onAuthRequired }) => {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://viralspiritio-production.up.railway.app';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.viralsplit.io';
   const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle', progress: 0 });
   const [dragActive, setDragActive] = useState(false);
   const [inputMode, setInputMode] = useState<'file' | 'url'>('file');
@@ -40,13 +40,83 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
     return patterns.some(pattern => pattern.test(url));
   };
 
+  // Polling function for fallback when WebSocket fails
+  const startPolling = (projectId: string, isTrial: boolean) => {
+    console.log('Starting polling for project:', projectId);
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const headers: Record<string, string> = { 
+          'Content-Type': 'application/json'
+        };
+        
+        const authToken = localStorage.getItem('auth_token');
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/status`, {
+          method: 'GET',
+          headers
+        });
+
+                  if (response.ok) {
+            const status = await response.json();
+            
+            // Use actual progress from API
+            const progress = status.progress || 0;
+            const statusText = status.status || 'processing';
+            
+            // Map backend status to frontend status
+            let frontendStatus: 'uploading' | 'processing' | 'complete' | 'error' = 'processing';
+            if (statusText === 'ready_for_processing' || statusText === 'complete' || progress >= 100) {
+              frontendStatus = 'complete';
+            } else if (statusText === 'failed' || statusText === 'error') {
+              frontendStatus = 'error';
+            } else if (statusText === 'processing') {
+              frontendStatus = 'processing';
+            }
+            
+            setUploadState({
+              status: frontendStatus,
+              progress,
+              error: status.error,
+              projectId
+            });
+
+            if (frontendStatus === 'complete') {
+              clearInterval(pollInterval);
+              setTimeout(() => {
+                onUploadComplete(projectId, isTrial);
+              }, 500);
+            } else if (frontendStatus === 'error') {
+              clearInterval(pollInterval);
+            }
+          }
+      } catch (error) {
+        console.error('Polling error:', error);
+        // Continue polling on error
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Stop polling after 5 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      setUploadState({
+        status: 'error',
+        progress: 0,
+        error: 'Processing timeout'
+      });
+    }, 300000);
+  };
+
   const uploadFromUrl = async (url: string) => {
     try {
       // Check authentication
       const authToken = localStorage.getItem('auth_token');
       const isTrial = !authToken;
       
-      setUploadState({ status: 'uploading', progress: 15 });
+      setUploadState({ status: 'uploading', progress: 0 });
 
       const headers: Record<string, string> = { 
         'Content-Type': 'application/json'
@@ -56,6 +126,10 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
+      console.log('🔍 Making API request to:', `${API_BASE_URL}/api/upload/youtube`);
+      console.log('📡 Request headers:', headers);
+      console.log('📦 Request body:', { url, agreed_to_terms: agreedToTerms, is_trial: isTrial });
+      
       const response = await fetch(`${API_BASE_URL}/api/upload/youtube`, {
         method: 'POST',
         headers,
@@ -65,6 +139,9 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
           is_trial: isTrial
         })
       });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const error = await response.json();
@@ -73,39 +150,79 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
 
       const { project_id } = await response.json();
       
-      // Connect WebSocket for real-time updates
-      const ws = new WebSocket(`wss://api.viralsplit.io/ws/${project_id}`);
+      // Try WebSocket first, fallback to polling
+      let wsConnected = false;
       
-      ws.onmessage = (event) => {
-        const update = JSON.parse(event.data);
-        setUploadState({
-          status: update.status,
-          progress: update.progress,
-          error: update.error,
-          projectId: project_id
-        });
+      try {
+        const ws = new WebSocket(`wss://api.viralsplit.io/ws/${project_id}`);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          wsConnected = true;
+        };
+        
+        ws.onmessage = (event) => {
+          const update = JSON.parse(event.data);
+          
+          // Map backend status to frontend status
+          let frontendStatus: 'uploading' | 'processing' | 'complete' | 'error' = 'processing';
+          if (update.status === 'ready_for_processing' || update.status === 'complete' || update.progress >= 100) {
+            frontendStatus = 'complete';
+          } else if (update.status === 'failed' || update.status === 'error') {
+            frontendStatus = 'error';
+          } else if (update.status === 'processing') {
+            frontendStatus = 'processing';
+          }
+          
+          setUploadState({
+            status: frontendStatus,
+            progress: update.progress,
+            error: update.error,
+            projectId: project_id
+          });
 
-        // Complete the upload flow when done
-        if (update.status === 'complete') {
-          // Haptic-like delay before completion
-          setTimeout(() => {
-            onUploadComplete(project_id, isTrial);
+          // Complete the upload flow when done
+          if (frontendStatus === 'complete') {
+            setTimeout(() => {
+              onUploadComplete(project_id, isTrial);
+              ws.close();
+            }, 500);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          wsConnected = false;
+          // Fallback to polling
+          startPolling(project_id, isTrial);
+        };
+        
+        ws.onclose = () => {
+          console.log('WebSocket closed');
+          wsConnected = false;
+        };
+        
+        // Set a timeout for WebSocket connection
+        setTimeout(() => {
+          if (!wsConnected) {
+            console.log('WebSocket timeout, falling back to polling');
             ws.close();
-          }, 500);
-        }
-      };
-      
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setUploadState({
-          status: 'error',
-          progress: 0,
-          error: 'Connection error'
-        });
-      };
+            startPolling(project_id, isTrial);
+          }
+        }, 3000);
+        
+      } catch (error) {
+        console.error('WebSocket connection failed:', error);
+        startPolling(project_id, isTrial);
+      }
 
     } catch (error) {
-      console.error('URL processing error:', error);
+      console.error('❌ URL processing error:', error);
+      console.error('🔧 Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
       setUploadState({
         status: 'error',
         progress: 0,

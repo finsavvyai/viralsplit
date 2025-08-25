@@ -22,7 +22,7 @@ class APIService {
   constructor() {
     // Use your existing API endpoint - update this with your actual API URL
     this.baseURL = __DEV__ 
-      ? 'https://viralspiritio-production.up.railway.app'  // Production
+      ? 'https://api.viralsplit.io'  // Production
       : 'https://api.viralsplit.io'; // Production
     
     this.client = axios.create({
@@ -308,6 +308,22 @@ class APIService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // Version check
+  async getVersion(): Promise<any> {
+    try {
+      const response = await this.client.get('/version');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch version:', error);
+      return {
+        version: "1.0.0",
+        build: 1,
+        deployment: {},
+        timestamp: new Date().toISOString()
+      };
     }
   }
 }

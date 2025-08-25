@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test YouTube Processing</title>
+</head>
+<body>
+    <h1>Testing YouTube Processing</h1>
+    <button onclick="testYouTube()">Test YouTube Upload</button>
+    <div id="status"></div>
+    <div id="progress"></div>
+    
+    <script>
+    async function testYouTube() {
+        const status = document.getElementById('status');
+        const progress = document.getElementById('progress');
+        
+        status.innerHTML = 'Starting YouTube upload...';
+        
+        try {
+            // Step 1: Upload YouTube URL
+            const uploadResponse = await fetch('https://api.viralsplit.io/api/upload/youtube', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                    agreed_to_terms: true,
+                    is_trial: true
+                })
+            });
+            
+            const uploadData = await uploadResponse.json();
+            console.log('Upload response:', uploadData);
+            status.innerHTML = `Upload started. Project ID: ${uploadData.project_id}`;
+            
+            // Step 2: Poll for status
+            const projectId = uploadData.project_id;
+            let pollCount = 0;
+            
+            const pollInterval = setInterval(async () => {
+                pollCount++;
+                const statusResponse = await fetch(`https://api.viralsplit.io/api/projects/${projectId}/status`);
+                const statusData = await statusResponse.json();
+                
+                console.log(`Poll ${pollCount}:`, statusData);
+                progress.innerHTML = `Status: ${statusData.status}, Progress: ${statusData.progress}%`;
+                
+                if (statusData.status === 'ready_for_processing' || statusData.progress >= 100) {
+                    clearInterval(pollInterval);
+                    status.innerHTML = 'Processing complete!';
+                }
+                
+                if (pollCount > 30) {
+                    clearInterval(pollInterval);
+                    status.innerHTML = 'Timeout after 30 polls';
+                }
+            }, 2000);
+            
+        } catch (error) {
+            status.innerHTML = `Error: ${error.message}`;
+            console.error('Error:', error);
+        }
+    }
+    </script>
+</body>
+</html>

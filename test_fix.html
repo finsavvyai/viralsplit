@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test YouTube Processing Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .processing { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .progress { width: 100%; background: #f0f0f0; border-radius: 5px; height: 20px; margin: 10px 0; }
+        .progress-bar { height: 100%; background: #007bff; border-radius: 5px; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <h1>YouTube Processing Test (Fixed)</h1>
+    <button onclick="testYouTube()">Test YouTube Upload</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+    </div>
+    <div id="progressText">0%</div>
+    
+    <div id="status" class="status">Ready to test</div>
+    
+    <h3>Log:</h3>
+    <div id="log" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></div>
+    
+    <script>
+    function log(message, type = 'info') {
+        const logDiv = document.getElementById('log');
+        const timestamp = new Date().toLocaleTimeString();
+        const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+        logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(message);
+    }
+    
+    function updateProgress(progress) {
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressText').innerText = Math.round(progress) + '%';
+    }
+    
+    function clearLog() {
+        document.getElementById('log').innerHTML = '';
+    }
+    
+    async function testYouTube() {
+        const status = document.getElementById('status');
+        const apiUrl = 'https://api.viralsplit.io';
+        
+        status.className = 'status processing';
+        status.innerHTML = 'Starting YouTube upload test...';
+        updateProgress(0);
+        
+        log('=== Starting YouTube Processing Test ===');
+        log(`Using API: ${apiUrl}`);
+        
+        try {
+            // Step 1: Upload YouTube URL
+            log('Step 1: Uploading YouTube URL...');
+            const uploadResponse = await fetch(`${apiUrl}/api/upload/youtube`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                    agreed_to_terms: true,
+                    is_trial: true
+                })
+            });
+            
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+            }
+            
+            const uploadData = await uploadResponse.json();
+            log(`Upload successful! Project ID: ${uploadData.project_id}`, 'success');
+            log(`Task ID: ${uploadData.task_id}`);
+            
+            status.innerHTML = `Upload started. Project ID: ${uploadData.project_id}`;
+            updateProgress(5);
+            
+            // Step 2: Poll for status
+            log('Step 2: Starting progress polling...');
+            const projectId = uploadData.project_id;
+            let pollCount = 0;
+            let lastProgress = 0;
+            
+            const pollInterval = setInterval(async () => {
+                try {
+                    pollCount++;
+                    const statusResponse = await fetch(`${apiUrl}/api/projects/${projectId}/status`);
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error(`Status check failed: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    
+                    log(`Poll ${pollCount}: Status=${statusData.status}, Progress=${statusData.progress}%`);
+                    
+                    if (statusData.progress !== lastProgress) {
+                        updateProgress(statusData.progress);
+                        lastProgress = statusData.progress;
+                    }
+                    
+                    status.innerHTML = `Status: ${statusData.status}, Progress: ${statusData.progress}%`;
+                    
+                    // Check completion conditions
+                    if (statusData.status === 'ready_for_processing' || statusData.progress >= 100) {
+                        clearInterval(pollInterval);
+                        status.className = 'status success';
+                        status.innerHTML = 'Processing complete! ✅';
+                        updateProgress(100);
+                        log('=== TEST PASSED: Processing completed successfully! ===', 'success');
+                    } else if (statusData.status === 'failed' || statusData.status === 'error') {
+                        clearInterval(pollInterval);
+                        status.className = 'status error';
+                        status.innerHTML = `Processing failed: ${statusData.error || statusData.status}`;
+                        log(`=== TEST FAILED: ${statusData.error || statusData.status} ===`, 'error');
+                    }
+                    
+                    // Safety timeout
+                    if (pollCount > 30) {
+                        clearInterval(pollInterval);
+                        status.className = 'status error';
+                        status.innerHTML = 'Test timeout after 30 polls (60 seconds)';
+                        log('=== TEST TIMEOUT: No completion after 30 polls ===', 'error');
+                    }
+                    
+                } catch (pollError) {
+                    log(`Poll error: ${pollError.message}`, 'error');
+                }
+            }, 2000);
+            
+        } catch (error) {
+            status.className = 'status error';
+            status.innerHTML = `Test failed: ${error.message}`;
+            log(`=== TEST FAILED: ${error.message} ===`, 'error');
+            updateProgress(0);
+        }
+    }
+    </script>
+</body>
+</html>

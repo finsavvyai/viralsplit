@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mobile Debug - ViralSplit Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 10px; 
+            background: #f5f5f5;
+            font-size: 14px;
+        }
+        .container { 
+            max-width: 400px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 10px; 
+            margin: 8px 0; 
+            border-radius: 5px; 
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 5px 0; 
+            border: none; 
+            border-radius: 5px; 
+            background: #007bff; 
+            color: white; 
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            box-sizing: border-box;
+        }
+        .progress { 
+            width: 100%; 
+            height: 20px; 
+            background: #f0f0f0; 
+            border-radius: 10px; 
+            margin: 10px 0;
+        }
+        .progress-bar { 
+            height: 100%; 
+            background: #007bff; 
+            border-radius: 10px; 
+            width: 0%; 
+            transition: width 0.3s;
+        }
+        .debug-info {
+            font-size: 11px;
+            color: #666;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔧 Mobile Upload Debug</h2>
+        
+        <div class="debug-info">
+            <strong>Environment Check:</strong><br>
+            User Agent: <span id="userAgent"></span><br>
+            Screen: <span id="screenInfo"></span><br>
+            Network: <span id="networkInfo"></span><br>
+            Location: <span id="locationInfo"></span>
+        </div>
+
+        <input type="url" id="youtubeUrl" placeholder="YouTube URL" 
+               value="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+        
+        <button onclick="runFullTest()">🧪 Run Full Upload Test</button>
+        <button onclick="clearLog()">🗑️ Clear Log</button>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div style="text-align: center;" id="progressText">0%</div>
+        
+        <div id="logContainer"></div>
+    </div>
+
+    <script>
+        // Environment detection
+        document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 50) + '...';
+        document.getElementById('screenInfo').textContent = `${screen.width}x${screen.height}`;
+        document.getElementById('locationInfo').textContent = window.location.href;
+
+        // Network detection
+        if ('connection' in navigator) {
+            const conn = navigator.connection;
+            document.getElementById('networkInfo').textContent = 
+                `${conn.effectiveType || 'unknown'} (${conn.downlink || '?'}Mbps)`;
+        } else {
+            document.getElementById('networkInfo').textContent = 'Unknown';
+        }
+
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContainer = document.getElementById('logContainer');
+            
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>[${timestamp}]</strong><br>${message}`;
+            
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            updateProgress(0);
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = Math.round(percent) + '%';
+        }
+
+        async function testEnvironmentVariables() {
+            log('📊 Testing Environment Variables...', 'info');
+            
+            // Try to detect what API URL is being used
+            const scripts = Array.from(document.scripts);
+            let foundApiUrl = null;
+            
+            // Check if we can access window variables
+            try {
+                if (window.process && window.process.env) {
+                    log(`ENV: ${JSON.stringify(window.process.env)}`, 'info');
+                }
+            } catch (e) {
+                log('No process.env available (normal for browser)', 'info');
+            }
+            
+            // Test API URL discovery
+            const possibleUrls = [
+                'https://api.viralsplit.io',
+                'https://viralspiritio-production.up.railway.app',
+                'http://localhost:8000'
+            ];
+            
+            for (const url of possibleUrls) {
+                try {
+                    const response = await fetch(`${url}/health`, { 
+                        method: 'GET',
+                        timeout: 5000 
+                    });
+                    if (response.ok) {
+                        log(`✅ API accessible: ${url}`, 'success');
+                        foundApiUrl = url;
+                        break;
+                    }
+                } catch (error) {
+                    log(`❌ API failed: ${url} - ${error.message}`, 'error');
+                }
+            }
+            
+            return foundApiUrl;
+        }
+
+        async function testCORSHeaders() {
+            log('🌐 Testing CORS Headers...', 'info');
+            
+            try {
+                const response = await fetch('https://api.viralsplit.io/health', {
+                    method: 'OPTIONS'
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                };
+                
+                log(`CORS Headers: ${JSON.stringify(corsHeaders, null, 2)}`, 'info');
+                
+                if (corsHeaders['Access-Control-Allow-Origin'] === '*' || 
+                    corsHeaders['Access-Control-Allow-Origin'] === window.location.origin) {
+                    log('✅ CORS configured correctly', 'success');
+                    return true;
+                } else {
+                    log('⚠️ CORS might be blocking requests', 'warning');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ CORS test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testYouTubeUpload(apiUrl) {
+            log('🎥 Testing YouTube Upload...', 'info');
+            updateProgress(10);
+            
+            const youtubeUrl = document.getElementById('youtubeUrl').value;
+            
+            if (!youtubeUrl || !youtubeUrl.includes('youtube.com')) {
+                log('❌ Invalid YouTube URL', 'error');
+                return false;
+            }
+            
+            try {
+                const uploadResponse = await fetch(`${apiUrl}/api/upload/youtube`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin,
+                        'Referer': window.location.href
+                    },
+                    body: JSON.stringify({
+                        url: youtubeUrl,
+                        agreed_to_terms: true,
+                        is_trial: true
+                    })
+                });
+
+                updateProgress(30);
+
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    log(`❌ Upload failed: ${uploadResponse.status} - ${errorText}`, 'error');
+                    return false;
+                }
+
+                const uploadData = await uploadResponse.json();
+                log(`✅ Upload started! Project ID: ${uploadData.project_id.substring(0, 8)}...`, 'success');
+                
+                // Test progress polling
+                const projectId = uploadData.project_id;
+                let pollCount = 0;
+                
+                updateProgress(50);
+                
+                return new Promise((resolve) => {
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            pollCount++;
+                            const statusResponse = await fetch(`${apiUrl}/api/projects/${projectId}/status`);
+                            
+                            if (!statusResponse.ok) {
+                                log(`❌ Status check failed: ${statusResponse.status}`, 'error');
+                                clearInterval(pollInterval);
+                                resolve(false);
+                                return;
+                            }
+                            
+                            const statusData = await statusResponse.json();
+                            const progress = statusData.progress || 0;
+                            
+                            updateProgress(50 + (progress * 0.5)); // Scale to 50-100%
+                            
+                            log(`📊 Poll ${pollCount}: ${statusData.status} - ${progress}%`, 'info');
+                            
+                            if (statusData.status === 'ready_for_processing' || progress >= 100) {
+                                clearInterval(pollInterval);
+                                updateProgress(100);
+                                log(`🎉 SUCCESS! Processing completed in ${pollCount * 2} seconds`, 'success');
+                                resolve(true);
+                            } else if (statusData.status === 'failed' || statusData.status === 'error') {
+                                clearInterval(pollInterval);
+                                log(`❌ Processing failed: ${statusData.error || statusData.status}`, 'error');
+                                resolve(false);
+                            }
+                            
+                            if (pollCount > 30) {
+                                clearInterval(pollInterval);
+                                log(`⏰ Timeout after ${pollCount * 2} seconds`, 'warning');
+                                resolve(false);
+                            }
+                            
+                        } catch (error) {
+                            log(`❌ Polling error: ${error.message}`, 'error');
+                        }
+                    }, 2000);
+                });
+                
+            } catch (error) {
+                log(`❌ Upload request failed: ${error.message}`, 'error');
+                updateProgress(0);
+                return false;
+            }
+        }
+
+        async function runFullTest() {
+            clearLog();
+            log('🚀 Starting Mobile Upload Test...', 'info');
+            
+            // Test 1: Environment
+            const apiUrl = await testEnvironmentVariables();
+            if (!apiUrl) {
+                log('❌ No working API URL found!', 'error');
+                return;
+            }
+            
+            // Test 2: CORS
+            await testCORSHeaders();
+            
+            // Test 3: YouTube Upload
+            const uploadSuccess = await testYouTubeUpload(apiUrl);
+            
+            // Summary
+            if (uploadSuccess) {
+                log('🎉 ALL TESTS PASSED! Upload is working correctly.', 'success');
+            } else {
+                log('❌ Upload test failed. Check the errors above.', 'error');
+            }
+        }
+
+        // Auto-run basic checks on page load
+        setTimeout(() => {
+            log('📱 Mobile debug page loaded successfully', 'success');
+            log('Ready to test upload functionality', 'info');
+        }, 1000);
+    </script>
+</body>
+</html>

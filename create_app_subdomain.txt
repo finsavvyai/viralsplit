@@ -1,0 +1,43 @@
+# Create app.viralsplit.io to bypass ISP blocking
+
+## In Cloudflare Dashboard:
+
+1. Go to DNS settings
+2. Add new record:
+   Type: A
+   Name: app
+   Content: 64.29.17.131
+   Proxy: OFF (gray cloud)
+
+## In Vercel Dashboard:
+
+1. Go to your viralsplit project
+2. Settings → Domains  
+3. Add domain: app.viralsplit.io
+4. Vercel will verify it automatically
+
+## Update Frontend:
+
+Edit vercel.json to use app subdomain as default:
+```json
+{
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.viralsplit.io"
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "viralsplit.io"
+        }
+      ],
+      "destination": "https://app.viralsplit.io/",
+      "permanent": true
+    }
+  ]
+}
+```
+
+Then users can access: https://app.viralsplit.io

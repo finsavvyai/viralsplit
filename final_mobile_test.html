@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Mobile Test - app.viralsplit.io</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .card { 
+            background: rgba(255,255,255,0.1); 
+            backdrop-filter: blur(10px);
+            border-radius: 16px; 
+            padding: 24px; 
+            margin: 16px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .status { 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            margin: 12px 0;
+            font-size: 14px;
+        }
+        .success { background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.5); }
+        .error { background: rgba(244, 67, 54, 0.2); border: 1px solid rgba(244, 67, 54, 0.5); }
+        .info { background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.5); }
+        .warning { background: rgba(255, 152, 0, 0.2); border: 1px solid rgba(255, 152, 0, 0.5); }
+        
+        .btn {
+            width: 100%; 
+            padding: 16px; 
+            border: none; 
+            border-radius: 12px; 
+            background: rgba(255,255,255,0.2);
+            color: white; 
+            font-size: 16px; 
+            font-weight: 600;
+            margin: 8px 0; 
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        .btn:active { transform: scale(0.98); background: rgba(255,255,255,0.3); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .progress-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 24px auto;
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        .progress-ring-bg {
+            stroke: rgba(255,255,255,0.2);
+            stroke-width: 8;
+            fill: transparent;
+        }
+        .progress-ring-progress {
+            stroke: #4CAF50;
+            stroke-width: 8;
+            stroke-linecap: round;
+            fill: transparent;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .domain-info {
+            font-size: 12px;
+            opacity: 0.8;
+            word-break: break-all;
+        }
+        
+        h1 { 
+            text-align: center; 
+            margin-bottom: 8px; 
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 24px;
+            font-size: 16px;
+        }
+        
+        .test-results {
+            max-height: 400px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🎥 ViralSplit Mobile Test</h1>
+        <div class="subtitle">Testing app.viralsplit.io deployment</div>
+        
+        <div class="domain-info">
+            <strong>Current URL:</strong> <span id="currentUrl"></span><br>
+            <strong>User Agent:</strong> <span id="userAgent"></span><br>
+            <strong>Screen:</strong> <span id="screenInfo"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="progress-container">
+            <svg class="progress-ring" width="100" height="100">
+                <circle class="progress-ring-bg" cx="50" cy="50" r="45"></circle>
+                <circle id="progressRing" class="progress-ring-progress" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+        
+        <button class="btn" onclick="runFullTest()" id="testBtn">🚀 Start YouTube Processing Test</button>
+        <button class="btn" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <div class="card">
+        <div class="test-results" id="results"></div>
+    </div>
+
+    <script>
+        // Initialize page info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 40) + '...';
+        document.getElementById('screenInfo').textContent = `${screen.width}×${screen.height}`;
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong><br>${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function updateProgress(percent) {
+            const ring = document.getElementById('progressRing');
+            const text = document.getElementById('progressText');
+            const circumference = 283;
+            const offset = circumference - (percent / 100) * circumference;
+            
+            ring.style.strokeDashoffset = offset;
+            text.textContent = Math.round(percent) + '%';
+            
+            // Color changes based on progress
+            if (percent >= 100) ring.style.stroke = '#4CAF50';
+            else if (percent >= 50) ring.style.stroke = '#2196F3';
+            else ring.style.stroke = '#FF9800';
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            updateProgress(0);
+        }
+
+        async function runFullTest() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Testing...';
+            
+            clearResults();
+            log('🚀 Starting comprehensive test suite...', 'info');
+
+            try {
+                // Test 1: Environment Check
+                log(`🌍 Testing from: ${window.location.hostname}`, 'info');
+                updateProgress(5);
+
+                // Test 2: API Health Check
+                log('📡 Checking API health...', 'info');
+                const healthResponse = await fetch('https://api.viralsplit.io/health');
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    log(`✅ API Health: ${healthData.status} (uptime: ${Math.round(healthData.uptime/3600)}h)`, 'success');
+                } else {
+                    throw new Error(`API health check failed: ${healthResponse.status}`);
+                }
+                updateProgress(15);
+
+                // Test 3: CORS Check
+                log('🌐 Testing CORS configuration...', 'info');
+                const corsResponse = await fetch('https://api.viralsplit.io/health', {
+                    method: 'OPTIONS'
+                });
+                log('✅ CORS: No preflight errors detected', 'success');
+                updateProgress(25);
+
+                // Test 4: YouTube Upload
+                log('🎥 Testing YouTube URL processing...', 'info');
+                const uploadResponse = await fetch('https://api.viralsplit.io/api/upload/youtube', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin,
+                        'Referer': window.location.href
+                    },
+                    body: JSON.stringify({
+                        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        agreed_to_terms: true,
+                        is_trial: true
+                    })
+                });
+
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
+                }
+
+                const uploadData = await uploadResponse.json();
+                const projectId = uploadData.project_id;
+                log(`✅ Upload initiated! Project: ${projectId.substring(0, 8)}...`, 'success');
+                updateProgress(40);
+
+                // Test 5: Progress Monitoring
+                log('📊 Monitoring processing progress...', 'info');
+                let pollCount = 0;
+                let lastReportedProgress = 0;
+
+                const monitorProgress = () => {
+                    return new Promise((resolve, reject) => {
+                        const pollInterval = setInterval(async () => {
+                            try {
+                                pollCount++;
+                                const statusResponse = await fetch(`https://api.viralsplit.io/api/projects/${projectId}/status`);
+                                
+                                if (!statusResponse.ok) {
+                                    throw new Error(`Status check failed: ${statusResponse.status}`);
+                                }
+
+                                const statusData = await statusResponse.json();
+                                const apiProgress = statusData.progress || 0;
+                                const status = statusData.status;
+                                
+                                // Map API progress to display progress (40% base + 60% from API)
+                                const displayProgress = 40 + (apiProgress * 0.6);
+                                updateProgress(displayProgress);
+
+                                // Log progress changes
+                                if (apiProgress !== lastReportedProgress) {
+                                    log(`📈 Progress: ${apiProgress}% - ${statusData.message || status}`, 'info');
+                                    lastReportedProgress = apiProgress;
+                                }
+
+                                // Check completion
+                                if (status === 'ready_for_processing' || apiProgress >= 100) {
+                                    clearInterval(pollInterval);
+                                    updateProgress(100);
+                                    log(`🎉 SUCCESS! Processing completed in ${pollCount * 2} seconds`, 'success');
+                                    log(`Final status: ${statusData.message}`, 'success');
+                                    resolve(true);
+                                } else if (status === 'failed' || status === 'error') {
+                                    clearInterval(pollInterval);
+                                    log(`❌ Processing failed: ${statusData.error || status}`, 'error');
+                                    reject(new Error(statusData.error || status));
+                                }
+
+                                // Timeout protection
+                                if (pollCount > 30) {
+                                    clearInterval(pollInterval);
+                                    log(`⏰ Test timeout after ${pollCount * 2} seconds`, 'warning');
+                                    resolve(false);
+                                }
+
+                            } catch (pollError) {
+                                log(`⚠️ Polling error: ${pollError.message}`, 'warning');
+                                // Continue polling unless it's a critical error
+                            }
+                        }, 2000);
+                    });
+                };
+
+                const success = await monitorProgress();
+                
+                if (success) {
+                    log('🎯 ALL TESTS PASSED! YouTube processing is working correctly.', 'success');
+                    log('✅ The app.viralsplit.io deployment is fully functional.', 'success');
+                } else {
+                    log('⚠️ Test completed with warnings. Check the logs above.', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`, 'error');
+                updateProgress(0);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Start YouTube Processing Test';
+            }
+        }
+
+        // Auto-run if accessed from app.viralsplit.io
+        if (window.location.hostname === 'app.viralsplit.io') {
+            log('🌟 Detected app.viralsplit.io - auto-starting test in 3 seconds...', 'info');
+            setTimeout(runFullTest, 3000);
+        }
+    </script>
+</body>
+</html>

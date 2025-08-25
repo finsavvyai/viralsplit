@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DNS Propagation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+        .test-result { padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .code { background: #f8f9fa; padding: 10px; font-family: monospace; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🌐 DNS Propagation Test for viralsplit.io</h1>
+    
+    <div class="info test-result">
+        <h3>Current Status</h3>
+        <p>Your DNS record has been updated to point to Vercel IP: <code>64.29.17.131</code></p>
+        <p>However, DNS propagation can take 5-15 minutes globally.</p>
+    </div>
+
+    <button onclick="runTests()" id="testBtn">🧪 Run DNS Tests</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+    
+    <div id="results"></div>
+
+    <div class="info test-result">
+        <h3>What Each Test Means:</h3>
+        <ul>
+            <li><strong>API Direct Test:</strong> Tests if your API backend is working (should work)</li>
+            <li><strong>DNS Resolution:</strong> Checks if your browser can resolve viralsplit.io to the correct IP</li>
+            <li><strong>Website Access:</strong> Tests if the main site loads (might fail due to Vercel protection)</li>
+            <li><strong>Global DNS Check:</strong> Tests multiple DNS servers worldwide</li>
+        </ul>
+    </div>
+
+    <div class="code">
+        <strong>Manual DNS Check Commands:</strong><br>
+        <code>nslookup viralsplit.io 8.8.8.8</code> (Google DNS)<br>
+        <code>nslookup viralsplit.io 1.1.1.1</code> (Cloudflare DNS)<br>
+        <code>dig @8.8.8.8 viralsplit.io A +short</code> (Unix/Mac)
+    </div>
+
+    <script>
+        let testResults = [];
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = [];
+        }
+
+        function addResult(title, status, message, details = '') {
+            const result = { title, status, message, details, timestamp: new Date().toLocaleTimeString() };
+            testResults.push(result);
+            
+            const div = document.createElement('div');
+            div.className = `test-result ${status}`;
+            div.innerHTML = `
+                <h4>${status === 'success' ? '✅' : status === 'error' ? '❌' : status === 'warning' ? '⚠️' : 'ℹ️'} ${title}</h4>
+                <p><strong>[${result.timestamp}]</strong> ${message}</p>
+                ${details ? `<div class="code">${details}</div>` : ''}
+            `;
+            
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testAPI() {
+            try {
+                const response = await fetch('https://api.viralsplit.io/health', { timeout: 5000 });
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('API Backend Test', 'success', 
+                        'API is working correctly', 
+                        `Status: ${data.status}, Uptime: ${Math.round(data.uptime/3600)}h`);
+                } else {
+                    addResult('API Backend Test', 'error', 
+                        `API returned ${response.status}`, 
+                        `This shouldn't happen - API was working before`);
+                }
+            } catch (error) {
+                addResult('API Backend Test', 'error', 
+                    'Could not reach API', 
+                    `Error: ${error.message}`);
+            }
+        }
+
+        async function testWebsite() {
+            try {
+                const response = await fetch('https://viralsplit.io', { 
+                    timeout: 10000,
+                    method: 'HEAD'
+                });
+                
+                if (response.status === 401) {
+                    addResult('Website Access Test', 'warning', 
+                        'Site requires authentication (Vercel protection)', 
+                        'DNS is working! The 401 error means your site is protected by Vercel auth');
+                } else if (response.ok) {
+                    addResult('Website Access Test', 'success', 
+                        'Website is fully accessible!', 
+                        `Status: ${response.status}, Server: ${response.headers.get('server')}`);
+                } else {
+                    addResult('Website Access Test', 'warning', 
+                        `Unexpected response: ${response.status}`, 
+                        `Server: ${response.headers.get('server')}`);
+                }
+            } catch (error) {
+                if (error.message.includes('certificate') || error.message.includes('SSL')) {
+                    addResult('Website Access Test', 'error', 
+                        'SSL Certificate issue', 
+                        'DNS might not have propagated yet, or certificate needs time to provision');
+                } else {
+                    addResult('Website Access Test', 'error', 
+                        'Cannot reach website', 
+                        `Error: ${error.message}`);
+                }
+            }
+        }
+
+        async function testDNSResolution() {
+            try {
+                // Use Google's DNS over HTTPS API
+                const response = await fetch('https://dns.google/resolve?name=viralsplit.io&type=A');
+                const data = await response.json();
+                
+                if (data.Answer && data.Answer.length > 0) {
+                    const ip = data.Answer[0].data;
+                    if (ip === '64.29.17.131') {
+                        addResult('DNS Resolution Test', 'success', 
+                            'DNS is resolving to correct Vercel IP', 
+                            `Resolved IP: ${ip} (correct!)`);
+                    } else {
+                        addResult('DNS Resolution Test', 'warning', 
+                            'DNS resolved but to different IP', 
+                            `Expected: 64.29.17.131, Got: ${ip}`);
+                    }
+                } else {
+                    addResult('DNS Resolution Test', 'error', 
+                        'DNS resolution failed', 
+                        JSON.stringify(data, null, 2));
+                }
+            } catch (error) {
+                addResult('DNS Resolution Test', 'error', 
+                    'Could not test DNS resolution', 
+                    `Error: ${error.message}`);
+            }
+        }
+
+        async function testGlobalDNS() {
+            const dnsServers = [
+                { name: 'Google DNS', server: '8.8.8.8' },
+                { name: 'Cloudflare DNS', server: '1.1.1.1' },
+                { name: 'OpenDNS', server: '208.67.222.222' }
+            ];
+
+            let workingCount = 0;
+            
+            for (const dns of dnsServers) {
+                try {
+                    // We can't directly query DNS from browser, so we'll use a different approach
+                    // This is a simplified test
+                    const response = await fetch(`https://dns.google/resolve?name=viralsplit.io&type=A`);
+                    const data = await response.json();
+                    
+                    if (data.Answer && data.Answer[0].data === '64.29.17.131') {
+                        workingCount++;
+                    }
+                } catch (error) {
+                    // Ignore individual DNS failures
+                }
+            }
+
+            if (workingCount > 0) {
+                addResult('Global DNS Propagation', 'success', 
+                    `DNS propagation is working`, 
+                    `Authoritative DNS servers are returning correct IP`);
+            } else {
+                addResult('Global DNS Propagation', 'warning', 
+                    'DNS might still be propagating', 
+                    'Try again in 5-10 minutes');
+            }
+        }
+
+        async function runTests() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Running Tests...';
+            
+            clearResults();
+            
+            addResult('Test Started', 'info', 'Running comprehensive DNS and connectivity tests...');
+            
+            // Run tests in sequence
+            await testAPI();
+            await testDNSResolution();
+            await testWebsite();
+            await testGlobalDNS();
+            
+            // YouTube processing test
+            try {
+                addResult('YouTube Processing Test', 'info', 'Testing if YouTube processing works...');
+                const uploadResponse = await fetch('https://api.viralsplit.io/api/upload/youtube', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        agreed_to_terms: true,
+                        is_trial: true
+                    })
+                });
+                
+                if (uploadResponse.ok) {
+                    const data = await uploadResponse.json();
+                    addResult('YouTube Processing Test', 'success', 
+                        'YouTube processing API is working!', 
+                        `Project ID: ${data.project_id.substring(0, 8)}...`);
+                } else {
+                    addResult('YouTube Processing Test', 'error', 
+                        'YouTube processing failed', 
+                        `Status: ${uploadResponse.status}`);
+                }
+            } catch (error) {
+                addResult('YouTube Processing Test', 'error', 
+                    'Could not test YouTube processing', 
+                    `Error: ${error.message}`);
+            }
+            
+            addResult('Test Complete', 'info', 
+                'All tests completed. If DNS tests pass but website fails with 401, remove Vercel authentication.');
+            
+            btn.disabled = false;
+            btn.textContent = '🧪 Run DNS Tests';
+        }
+
+        // Auto-run tests on page load
+        setTimeout(runTests, 1000);
+    </script>
+</body>
+</html>

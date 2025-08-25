@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>Direct Test</title></head>
+<body>
+<h1>Testing Direct Connection</h1>
+<script>
+// Test direct IP with Host header
+fetch('https://76.76.19.61', {
+    headers: { 'Host': 'viralsplit.io' }
+}).then(r => console.log('Direct IP test:', r.status))
+  .catch(e => console.error('Direct IP failed:', e));
+
+// Test domain
+fetch('https://viralsplit.io')
+  .then(r => console.log('Domain test:', r.status))
+  .catch(e => console.error('Domain failed:', e));
+</script>
+<p>Check browser console for results</p>
+</body>
+</html>

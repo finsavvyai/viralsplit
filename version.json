@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "build": 57,
+  "build": 63,
   "last_deployment": {
     "railway": {
       "build": 56,
@@ -8,8 +8,8 @@
       "status": "deploying"
     },
     "vercel": {
-      "build": 57,
-      "deployed_at": "2025-08-25T09:09:20Z",
+      "build": 63,
+      "deployed_at": "2025-08-25T20:19:14Z",
       "status": "deploying"
     }
   },
@@ -237,6 +237,41 @@
         "Fixed CORS configuration",
         "Updated API to allow all origins",
         "Fixed 'Failed to fetch' error for video processing"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": 58,
+      "date": "2025-08-25",
+      "changes": [
+        "Modernized authentication modal",
+        "Added social login options (Google, GitHub)",
+        "Improved UX with animations and better design",
+        "Added password visibility toggles",
+        "Enhanced form validation and error handling"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": 60,
+      "date": "2025-08-25",
+      "changes": [
+        "Redesigned auth modal with Apple HID guidelines",
+        "Added Apple Sign In as primary option",
+        "Improved typography and spacing following Apple standards",
+        "Enhanced visual hierarchy and accessibility",
+        "Refined animations and interaction patterns"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": 62,
+      "date": "2025-08-25",
+      "changes": [
+        "Fixed input text visibility",
+        "Added proper text color (gray-900) to all input fields",
+        "Fixed white text on white background issue",
+        "Ensured proper contrast for accessibility"
       ]
     }
   ]

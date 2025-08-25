@@ -1,0 +1,33 @@
+# In Cloudflare Dashboard:
+
+1. Go to DNS settings
+2. Click "Add record"
+3. Add this A record:
+   Type: A
+   Name: @ (or leave empty)
+   IPv4 address: 76.76.19.61
+   Proxy: OFF (DNS only - gray cloud)
+   
+4. If it says "Record already exists", then:
+   - Look for ANY record with the domain name
+   - It might show as "viralsplit.io" instead of "@"
+   - Edit or delete that record
+   
+5. Check Security settings:
+   - Go to Security → Settings
+   - Look for "Security Level" - set to "Essentially Off" temporarily
+   - Check Security → Events to see if traffic is being blocked
+   
+6. Check Page Rules:
+   - Go to Rules → Page Rules
+   - Look for any rule affecting viralsplit.io/*
+   - Delete or disable it
+
+7. Check Redirect Rules:
+   - Go to Rules → Redirect Rules  
+   - Look for any rule redirecting your domain
+   
+8. Nuclear Option - Start Fresh:
+   - Export all DNS records
+   - Delete ALL records for viralsplit.io (root domain only)
+   - Re-add just the A record pointing to 76.76.19.61

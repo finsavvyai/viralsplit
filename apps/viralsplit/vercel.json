@@ -12,5 +12,18 @@
   },
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.viralsplit.io"
-  }
+  },
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "viralsplit.io"
+        }
+      ],
+      "destination": "https://app.viralsplit.io/$1",
+      "permanent": true
+    }
+  ]
 }

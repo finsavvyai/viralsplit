@@ -23,18 +23,77 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { login, register, loading, error } = useAuth();
+  const { login, register, loading, error, clearError } = useAuth();
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+    
+    if (!email.trim()) {
+      errors.push('Email is required');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.push('Please enter a valid email address');
+    }
+    
+    if (!password.trim()) {
+      errors.push('Password is required');
+    } else if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+    
+    if (mode === 'register') {
+      if (password !== confirmPassword) {
+        errors.push('Passwords do not match');
+      }
+      
+      // Password strength validation
+      if (!/(?=.*[a-z])(?=.*[A-Z])/.test(password)) {
+        errors.push('Password must contain both uppercase and lowercase letters');
+      }
+      if (!/\d/.test(password)) {
+        errors.push('Password must contain at least one number');
+      }
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (mode === 'register') {
-      if (password !== confirmPassword) {
-        return;
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSuccessMessage('');
+    clearError();
+    
+    try {
+      if (mode === 'register') {
+        const result = await register(email, password, brand);
+        if (result.success) {
+          setSuccessMessage(result.message || 'Registration successful! Please login.');
+          // Switch to login mode after successful registration
+          setTimeout(() => {
+            setMode('login');
+            setPassword('');
+            setConfirmPassword('');
+            setSuccessMessage('');
+          }, 2000);
+        }
+      } else {
+        const result = await login(email, password);
+        if (result.success) {
+          handleClose();
+        }
       }
-      await register(email, password, brand);
-    } else {
-      await login(email, password);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -44,6 +103,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setConfirmPassword('');
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setValidationErrors([]);
+    setSuccessMessage('');
+    setIsSubmitting(false);
+    clearError();
     onClose();
   };
 
@@ -59,6 +122,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setConfirmPassword('');
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setValidationErrors([]);
+    setSuccessMessage('');
+    clearError();
   };
 
   if (!isOpen) return null;
@@ -110,6 +176,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Content */}
           <div className="p-6">
+            {/* Success Message */}
+            {successMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-green-50 border border-green-200 rounded-2xl text-sm"
+              >
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-green-700">{successMessage}</span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* API Error */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -121,6 +204,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                   <span className="text-red-700">{error}</span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Validation Errors */}
+            {validationErrors.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl text-sm"
+              >
+                <div className="space-y-1">
+                  {validationErrors.map((validationError, index) => (
+                    <div key={index} className="flex items-start">
+                      <svg className="w-4 h-4 mr-2 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-red-700">{validationError}</span>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -286,12 +389,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {/* Primary Button - Apple Style */}
               <motion.button
                 type="submit"
-                disabled={loading || (mode === 'register' && password !== confirmPassword)}
+                disabled={isSubmitting || loading || (mode === 'register' && password !== confirmPassword)}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-2xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
               >
-                {loading ? (
+                {isSubmitting || loading ? (
                   <div className="flex items-center justify-center">
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

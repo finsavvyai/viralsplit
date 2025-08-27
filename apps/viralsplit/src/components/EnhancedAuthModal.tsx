@@ -3,25 +3,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './AuthProvider';
-import { 
-  X, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Github, 
-  Chrome,
-  Smartphone,
-  Globe,
-  Zap,
-  Shield,
-  CheckCircle
-} from 'lucide-react';
 
 interface EnhancedAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultMode?: 'login' | 'register';
+  defaultMode?: 'login' | 'register' | 'reset' | 'verify' | 'mfa-setup' | 'mfa-login';
 }
 
 export const EnhancedAuthModal: React.FC<EnhancedAuthModalProps> = ({ 
@@ -29,16 +15,27 @@ export const EnhancedAuthModal: React.FC<EnhancedAuthModalProps> = ({
   onClose, 
   defaultMode = 'login' 
 }) => {
-  const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'reset' | 'verify' | 'mfa-setup' | 'mfa-login'>(defaultMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [brand, setBrand] = useState('viralsplit');
+  const [mfaCode, setMfaCode] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [qrCode, setQrCode] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, register, loading, error } = useAuth();
+  const { login, register, loading, error, clearError } = useAuth();
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.viralsplit.io';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

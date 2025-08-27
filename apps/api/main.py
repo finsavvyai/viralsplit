@@ -14,7 +14,12 @@ from celery.result import AsyncResult
 from dotenv import load_dotenv
 from services.storage import R2Storage
 from services.video_processor import VideoProcessor
-from services.auth import auth_service, UserCreate, UserLogin, SocialAccount, User
+from services.auth import (
+    auth_service, UserCreate, UserLogin, SocialAccount, User,
+    EmailVerificationRequest, VerifyEmailRequest, PasswordResetRequest,
+    ResetPasswordRequest, EnableMFARequest, VerifyMFARequest,
+    LoginWithMFARequest, AdminUserUpdate
+)
 from services.ai_enhancer import AIEnhancer
 from services.trend_monitor import trend_monitor, get_live_trends
 from services.thumbnail_generator import AIThumbnailGenerator
@@ -137,14 +142,11 @@ async def get_metrics():
 # ===== AUTHENTICATION ENDPOINTS =====
 
 @app.post("/api/auth/register")
-async def register_user(user_data: UserCreate):
-    """Register a new user"""
+async def register_user(user_data: UserCreate, require_approval: bool = False):
+    """Register a new user with email verification"""
     try:
-        user = await auth_service.register_user(user_data)
-        return {
-            "message": "User registered successfully",
-            "user": user
-        }
+        result = await auth_service.register_user(user_data, require_approval)
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -165,6 +167,21 @@ async def login_user(login_data: UserLogin):
 async def get_current_user(user: User = Depends(auth_service.get_current_user)):
     """Get current user information"""
     return {"user": user}
+
+@app.post("/api/auth/refresh")
+async def refresh_token(request: dict):
+    """Refresh access token using refresh token"""
+    try:
+        refresh_token = request.get('refresh_token')
+        if not refresh_token:
+            raise HTTPException(status_code=400, detail="Refresh token is required")
+        
+        result = await auth_service.refresh_access_token(refresh_token)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Token refresh failed: {str(e)}")
 
 @app.post("/api/auth/social-login")
 async def social_login(request: dict):
@@ -249,6 +266,159 @@ async def disconnect_social_account(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to disconnect account: {str(e)}")
+
+# ===== ENHANCED AUTHENTICATION ENDPOINTS =====
+
+@app.post("/api/auth/send-verification")
+async def send_verification_email(email_data: EmailVerificationRequest):
+    """Send or resend email verification"""
+    try:
+        result = await auth_service.send_verification_email_endpoint(email_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send verification: {str(e)}")
+
+@app.post("/api/auth/verify-email")
+async def verify_email(verify_data: VerifyEmailRequest):
+    """Verify email address with token"""
+    try:
+        result = await auth_service.verify_email(verify_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Email verification failed: {str(e)}")
+
+@app.post("/api/auth/request-reset")
+async def request_password_reset(reset_data: PasswordResetRequest):
+    """Request password reset"""
+    try:
+        result = await auth_service.request_password_reset(reset_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Password reset request failed: {str(e)}")
+
+@app.post("/api/auth/reset-password")
+async def reset_password(reset_data: ResetPasswordRequest):
+    """Reset password with token"""
+    try:
+        result = await auth_service.reset_password(reset_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Password reset failed: {str(e)}")
+
+@app.post("/api/auth/mfa/enable")
+async def enable_mfa(
+    mfa_data: EnableMFARequest,
+    user: User = Depends(auth_service.get_current_user)
+):
+    """Enable MFA for user"""
+    try:
+        result = await auth_service.enable_mfa(user.id, mfa_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MFA setup failed: {str(e)}")
+
+@app.post("/api/auth/mfa/verify")
+async def verify_mfa_setup(
+    mfa_data: VerifyMFARequest,
+    user: User = Depends(auth_service.get_current_user)
+):
+    """Verify MFA setup and enable it"""
+    try:
+        result = await auth_service.verify_mfa_setup(user.id, mfa_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MFA verification failed: {str(e)}")
+
+@app.post("/api/auth/mfa/disable")
+async def disable_mfa(
+    mfa_data: EnableMFARequest,
+    user: User = Depends(auth_service.get_current_user)
+):
+    """Disable MFA for user"""
+    try:
+        result = await auth_service.disable_mfa(user.id, mfa_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MFA disable failed: {str(e)}")
+
+@app.post("/api/auth/login-mfa")
+async def login_with_mfa(login_data: LoginWithMFARequest):
+    """Login with MFA code"""
+    try:
+        result = await auth_service.login_with_mfa(login_data)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MFA login failed: {str(e)}")
+
+# ===== ADMIN ENDPOINTS =====
+
+@app.get("/api/admin/users")
+async def get_all_users(
+    page: int = 1,
+    limit: int = 20,
+    user: User = Depends(auth_service.get_current_user)
+):
+    """Get all users (admin only)"""
+    try:
+        result = await auth_service.get_all_users(user.id, page, limit)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get users: {str(e)}")
+
+@app.put("/api/admin/users/{user_id}")
+async def update_user(
+    user_id: str,
+    update_data: AdminUserUpdate,
+    admin_user: User = Depends(auth_service.get_current_user)
+):
+    """Update user (admin only)"""
+    try:
+        result = await auth_service.update_user_admin(admin_user.id, user_id, update_data)
+        return {"user": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
+
+@app.get("/api/admin/pending-users")
+async def get_pending_users(user: User = Depends(auth_service.get_current_user)):
+    """Get users pending approval (admin only)"""
+    try:
+        users = await auth_service.get_pending_users(user.id)
+        return users
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get pending users: {str(e)}")
+
+@app.get("/api/admin/stats")
+async def get_system_stats(user: User = Depends(auth_service.get_current_user)):
+    """Get system statistics (admin only)"""
+    try:
+        stats = await auth_service.get_system_stats(user.id)
+        return stats
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
 # ===== VIDEO UPLOAD ENDPOINTS =====
 

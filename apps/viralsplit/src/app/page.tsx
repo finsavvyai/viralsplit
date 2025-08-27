@@ -1,4 +1,5 @@
 'use client';
+// Build 72 - VIBRANT UI DEPLOYED - $(date +%Y-%m-%d_%H:%M:%S)
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +9,7 @@ import { AuthModal } from '../components/AuthModal';
 import { SocialAccountManager } from '../components/SocialAccountManager';
 import { ViralScoreCard } from '../components/ViralScoreCard';
 import { HookSuggestions } from '../components/HookSuggestions';
+import { BUILD_VERSION } from './cache-bust.js';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { AdvancedAIFeatures } from '../components/AdvancedAIFeatures';
 import { useAuth } from '../components/AuthProvider';
@@ -163,9 +165,19 @@ export default function Home() {
   useEffect(() => {
     const fetchVersion = async () => {
       try {
-        console.log('🔍 Fetching version from API...');
-        console.log('🌐 API URL: https://api.viralsplit.io/version');
+        // Try local version.json first (most up-to-date)
+        console.log('🔍 Fetching version from local version.json...');
+        const localResponse = await fetch('/version.json');
+        if (localResponse.ok) {
+          const localData = await localResponse.json();
+          console.log('✅ Local version:', localData.build);
+          const versionString = `v${localData.version}-build${localData.build}`;
+          setVersion(versionString);
+          return;
+        }
         
+        // Fallback to API
+        console.log('🌐 Fallback to API: https://api.viralsplit.io/version');
         const response = await fetch(`https://api.viralsplit.io/version`, {
           method: 'GET',
           headers: {
@@ -195,7 +207,7 @@ export default function Home() {
           stack: error instanceof Error ? error.stack : 'No stack trace'
         });
         // Fallback to a hardcoded version based on our current build
-        const fallbackVersion = "v1.0.0-build44";
+        const fallbackVersion = "v1.0.0-build67";
         console.log('🔄 Using fallback version:', fallbackVersion);
         setVersion(fallbackVersion);
       }
@@ -260,12 +272,16 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/50 to-purple-900/50">
-      {/* Background Effects */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0014] via-[#1a0f2e] to-[#2d1b4e]">
+      {/* Vibrant Background Effects */}
       <div className="fixed inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-pink-600/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.3),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,119,198,0.2),transparent_50%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-fuchsia-600/5 to-pink-600/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.3),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(236,72,153,0.2),transparent_50%)]" />
+        {/* Animated gradient orbs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-violet-600/30 to-pink-600/30 rounded-full filter blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[40rem] h-[40rem] bg-gradient-to-r from-fuchsia-500/10 to-indigo-500/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
       
       <div className="relative z-10">

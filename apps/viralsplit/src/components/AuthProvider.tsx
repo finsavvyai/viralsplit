@@ -23,17 +23,26 @@ interface SocialAccount {
   connected_at: string;
 }
 
+interface AuthResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  user?: User;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
   socialAccounts: SocialAccount[];
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, brand: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (email: string, password: string, brand: string) => Promise<AuthResult>;
   logout: () => void;
   connectSocialAccount: (platform: string, accountData: any) => Promise<void>;
   disconnectSocialAccount: (platform: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  clearError: () => void;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,6 +130,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     setError(null);
 
+    // Client-side validation
+    if (!email || !password) {
+      setError('Email and password are required');
+      setLoading(false);
+      return { success: false, error: 'Email and password are required' };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return { success: false, error: 'Please enter a valid email address' };
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
@@ -137,11 +160,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         localStorage.setItem('auth_token', data.access_token);
         await fetchSocialAccounts(data.access_token);
+        setError(null);
+        return { success: true, user: data.user };
       } else {
-        setError(data.detail || 'Login failed');
+        const errorMessage = data.detail || data.message || 'Invalid credentials';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      const errorMessage = 'Network error. Please check your connection and try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -150,6 +179,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (email: string, password: string, brand: string = 'viralsplit') => {
     setLoading(true);
     setError(null);
+
+    // Client-side validation
+    if (!email || !password) {
+      setError('Email and password are required');
+      setLoading(false);
+      return { success: false, error: 'Email and password are required' };
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      setLoading(false);
+      return { success: false, error: 'Password must be at least 8 characters long' };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return { success: false, error: 'Please enter a valid email address' };
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
@@ -163,13 +212,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Auto-login after successful registration
-        await login(email, password);
+        // Don't auto-login, let user login manually to avoid token issues
+        setError(null);
+        // Return success indicator
+        return { success: true, message: 'Registration successful! Please login.' };
       } else {
-        setError(data.detail || 'Registration failed');
+        setError(data.detail || data.message || 'Registration failed');
+        return { success: false, error: data.detail || data.message || 'Registration failed' };
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      const errorMessage = 'Network error. Please check your connection and try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -179,7 +233,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     setSocialAccounts([]);
+    setError(null);
     localStorage.removeItem('auth_token');
+    // Clear any trial project data
+    localStorage.removeItem('trial_project_id');
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   const connectSocialAccount = async (platform: string, accountData: any) => {
@@ -255,6 +316,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     disconnectSocialAccount,
     loading,
     error,
+    clearError,
+    isAuthenticated: !!user && !!token,
   };
 
   return (

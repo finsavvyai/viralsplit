@@ -25,3 +25,6 @@ aiosqlite==0.19.0
 langdetect==1.0.9
 elevenlabs==0.2.26
 deep-translator==1.11.4
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+psutil==5.9.6

@@ -3,6 +3,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { wsClient } from '../lib/websocket-client';
+import { theme } from '../styles/theme';
 
 interface VideoUploaderProps {
   onUploadComplete: (projectId: string, isTrial?: boolean) => void;
@@ -409,12 +410,30 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
   const renderProgressContent = () => {
     const getStatusMessage = () => {
       if (inputMode === 'url') {
-        if (uploadState.progress < 35) return 'Fetching video content';
-        if (uploadState.progress < 65) return 'Processing video data';
-        if (uploadState.progress < 90) return 'Optimizing for platforms';
-        return 'Finalizing';
+        // Influencer-style progress messages
+        if (uploadState.progress < 10) return '🎬 Sliding into that YouTube link...';
+        if (uploadState.progress < 20) return '✨ Manifesting your content goals...';
+        if (uploadState.progress < 30) return '🔥 This video is about to be fire...';
+        if (uploadState.progress < 40) return '💎 Turning your content into diamonds...';
+        if (uploadState.progress < 50) return '🚀 Launching into viral territory...';
+        if (uploadState.progress < 60) return '👑 Crowning your content royalty...';
+        if (uploadState.progress < 70) return '🌟 Sprinkling that main character energy...';
+        if (uploadState.progress < 80) return '💫 Making your content absolutely iconic...';
+        if (uploadState.progress < 90) return '🎯 Hitting all the right algorithms...';
+        if (uploadState.progress < 95) return '✅ Final boss level optimization...';
+        return '🎉 Ready to break the internet!';
       }
-      return uploadState.status === 'processing' ? 'Processing video' : 'Uploading';
+      
+      // File upload messages
+      if (uploadState.status === 'processing') {
+        if (uploadState.progress < 20) return '🎭 Setting the scene for greatness...';
+        if (uploadState.progress < 40) return '💅 Giving your video a glow-up...';
+        if (uploadState.progress < 60) return '🔮 Adding that special sauce...';
+        if (uploadState.progress < 80) return '🌈 Making magic happen...';
+        return '✨ Almost ready to slay...';
+      }
+      
+      return uploadState.status === 'uploading' ? '📤 Serving looks while uploading...' : 'Processing video';
     };
 
     return (
@@ -443,8 +462,9 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
             />
             <defs>
               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#007AFF" />
-                <stop offset="100%" stopColor="#5856D6" />
+                <stop offset="0%" stopColor="#7c3aed" />
+                <stop offset="50%" stopColor="#d946ef" />
+                <stop offset="100%" stopColor="#ec4899" />
               </linearGradient>
             </defs>
           </svg>
@@ -455,12 +475,19 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
           </div>
         </div>
         
-        <h3 className="text-lg font-medium text-white/90 mb-2">
+        <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent mb-2">
           {getStatusMessage()}
         </h3>
-        <p className="text-sm text-white/60">
-          {inputMode === 'url' ? 'Your video is being prepared' : 'This may take a moment'}
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm text-white/80 font-medium">
+            {inputMode === 'url' ? 'Your content is getting the VIP treatment' : 'Patience bestie, greatness takes time'}
+          </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-white/60">
+            <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+            <div className="w-1.5 h-1.5 bg-fuchsia-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+            <div className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+          </div>
+        </div>
       </motion.div>
     );
   };
@@ -482,8 +509,8 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-xl font-medium text-white/90 mb-2">Ready to optimize</h3>
-          <p className="text-white/60">Your video has been processed successfully</p>
+          <h3 className="text-xl font-semibold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">That's so fetch! ✨</h3>
+          <p className="text-green-300">Your content is ready to absolutely serve 💅</p>
         </motion.div>
       );
     }
@@ -500,11 +527,11 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white/90 mb-2">Upload failed</h3>
-          <p className="text-sm text-red-400 mb-6">{uploadState.error}</p>
+          <h3 className="text-lg font-semibold bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent mb-2">That's not very demure 😅</h3>
+          <p className="text-sm text-rose-300 mb-6">{uploadState.error || 'The vibes are off bestie - let\'s run it back!'}</p>
           <button
             onClick={resetUpload}
-            className="px-6 py-2 bg-white/10 hover:bg-white/20 backdrop-blur rounded-full text-white font-medium transition-all duration-200"
+            className="px-6 py-3 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 hover:from-violet-600 hover:via-fuchsia-600 hover:to-pink-600 rounded-full text-white font-medium transition-all duration-200 shadow-lg shadow-fuchsia-500/25"
           >
             Try again
           </button>
@@ -516,13 +543,13 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
       return (
         <div className="space-y-6">
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
-            <h3 className="text-xl font-medium text-white/90 mb-2">YouTube URL</h3>
-            <p className="text-white/60">Process any YouTube video directly</p>
+            <h3 className="text-xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent mb-2">YouTube URL</h3>
+            <p className="text-white/70">Turn any YouTube video into pure content gold ✨</p>
           </div>
           
           <div className="space-y-4">
@@ -531,10 +558,10 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
               placeholder="https://youtube.com/watch?v=..."
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/50 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all backdrop-blur"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/50 focus:border-fuchsia-500 focus:outline-none focus:ring-4 focus:ring-fuchsia-500/20 transition-all backdrop-blur"
             />
             
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur">
+            <div className="p-4 bg-gradient-to-r from-orange-500/10 via-rose-500/10 to-pink-600/10 border border-orange-500/20 rounded-2xl backdrop-blur">
               <label className="flex items-start gap-3 text-sm text-white/80 cursor-pointer">
                 <div className="relative mt-0.5">
                   <input
@@ -545,7 +572,7 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
                   />
                   <div className={`w-5 h-5 rounded border-2 transition-all ${
                     agreedToTerms 
-                      ? 'bg-blue-500 border-blue-500' 
+                      ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 border-fuchsia-500' 
                       : 'border-white/30 hover:border-white/50'
                   }`}>
                     {agreedToTerms && (
@@ -564,7 +591,7 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
             <button
               onClick={handleYouTubeSubmit}
               disabled={!youtubeUrl || !agreedToTerms}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-white font-medium transition-all duration-200 shadow-lg backdrop-blur"
+              className="w-full py-3 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-600 hover:via-blue-600 hover:to-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-white font-medium transition-all duration-200 shadow-lg shadow-blue-500/25 backdrop-blur"
             >
               Process Video
             </button>
@@ -575,20 +602,24 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
 
     return (
       <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-fuchsia-500/25">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
         </div>
-        <h3 className="text-xl font-medium text-white/90 mb-2">
-          {dragActive ? 'Drop your video' : 'Upload video'}
+        <h3 className="text-xl font-semibold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent mb-2">
+          {dragActive ? 'Drop that content bestie! 📥' : 'Upload your masterpiece ✨'}
         </h3>
-        <p className="text-white/60 mb-6">
-          Drag and drop or click to select
+        <p className="text-white/70 mb-6">
+          {dragActive ? 'Let it go, let it go! 🎵' : 'Drag, drop, or click - your content awaits!'}
         </p>
-        <p className="text-xs text-white/40">
-          Supports MP4, MOV, AVI, WEBM • Max 500MB
-        </p>
+        <div className="flex items-center justify-center gap-2 text-xs text-white/50">
+          <span>MP4, MOV, AVI, WEBM</span>
+          <div className="w-1 h-1 bg-white/30 rounded-full"></div>
+          <span>Max 500MB</span>
+          <div className="w-1 h-1 bg-white/30 rounded-full"></div>
+          <span>Ready to go viral 🚀</span>
+        </div>
       </div>
     );
   };
@@ -599,7 +630,7 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
     <div className="space-y-8">
       {/* Mode Toggle - Apple style segmented control */}
       <div className="flex justify-center">
-        <div className="p-1 bg-white/5 rounded-2xl backdrop-blur border border-white/10">
+        <div className="p-1 bg-gradient-to-r from-white/5 to-white/10 rounded-2xl backdrop-blur border border-white/20 shadow-lg shadow-black/10">
           <div className="flex">
             <button
               onClick={() => {
@@ -608,8 +639,8 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
               }}
               className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                 inputMode === 'file' 
-                  ? 'bg-white text-black shadow-lg' 
-                  : 'text-white/70 hover:text-white/90'
+                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/25' 
+                  : 'text-white/70 hover:text-white/90 hover:bg-white/5'
               }`}
             >
               Upload File
@@ -621,8 +652,8 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
               }}
               className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                 inputMode === 'url' 
-                  ? 'bg-white text-black shadow-lg' 
-                  : 'text-white/70 hover:text-white/90'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-blue-500/25' 
+                  : 'text-white/70 hover:text-white/90 hover:bg-white/5'
               }`}
             >
               YouTube URL
@@ -640,12 +671,12 @@ export const AppleDesignUploader: React.FC<VideoUploaderProps> = ({ onUploadComp
         className={`
           relative overflow-hidden rounded-3xl p-12 transition-all duration-300
           ${dragActive && inputMode === 'file' 
-            ? 'bg-blue-500/10 border-blue-500/30 shadow-blue-500/20' 
-            : 'bg-white/5 border-white/10 shadow-black/20'
+            ? 'bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20' 
+            : 'bg-gradient-to-br from-white/5 to-white/10 border-white/20 shadow-lg shadow-black/10'
           }
-          border backdrop-blur-xl shadow-2xl
-          ${isInteractive && inputMode === 'file' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}
-          ${uploadState.status === 'error' ? 'border-red-500/30' : ''}
+          border backdrop-blur-xl
+          ${isInteractive && inputMode === 'file' ? 'cursor-pointer hover:from-white/10 hover:to-white/15 hover:border-white/30' : 'cursor-default'}
+          ${uploadState.status === 'error' ? 'border-rose-500/30 from-rose-500/5 to-rose-500/10' : ''}
         `}
       >
         {isInteractive && inputMode === 'file' && (

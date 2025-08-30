@@ -31,7 +31,7 @@ check_service() {
 
 # Check Redis
 echo -n "Redis (6379): "
-if redis-cli ping >/dev/null 2>&1; then
+if /opt/homebrew/bin/redis-cli ping >/dev/null 2>&1; then
     echo -e "${GREEN}✅ Running${NC}"
 else
     echo -e "${RED}❌ Not running${NC}"

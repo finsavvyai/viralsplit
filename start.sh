@@ -9,18 +9,18 @@ echo "🚀 Starting ViralSplit API..."
 if [ -f /.dockerenv ]; then
     echo "📦 Running in Docker container"
     
-    # Start Redis if not already running
-    if ! pgrep -x "redis-server" > /dev/null; then
-        echo "🔴 Starting Redis server..."
-        redis-server --daemonize yes
+    # Check if Redis is available (Railway provides Redis as a service)
+    if command -v redis-cli &> /dev/null; then
+        echo "🔴 Redis CLI available, checking connection..."
+        # Try to connect to Redis (Railway provides REDIS_URL)
+        if [ -n "$REDIS_URL" ]; then
+            echo "✅ Using Redis URL from environment"
+        else
+            echo "⚠️ No Redis URL found, using in-memory storage"
+        fi
+    else
+        echo "⚠️ Redis CLI not available, using in-memory storage"
     fi
-    
-    # Wait for Redis to be ready
-    echo "⏳ Waiting for Redis to be ready..."
-    until redis-cli ping > /dev/null 2>&1; do
-        sleep 1
-    done
-    echo "✅ Redis is ready"
 fi
 
 # Check if we need to run migrations or setup

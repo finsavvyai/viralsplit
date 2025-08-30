@@ -1,16 +1,16 @@
 {
   "version": "1.0.0",
-  "build": 73,
+  "build": 76,
   "last_deployment": {
     "railway": {
-      "build": 73,
-      "deployed_at": "2025-08-30T17:10:42Z",
+      "build": 75,
+      "deployed_at": "2025-08-30T17:42:11Z",
       "status": "deploying"
     },
     "vercel": {
-      "build": 72,
-      "deployed_at": "2025-08-26T07:32:29Z",
-      "status": "deploying"
+      "build": 76,
+      "deployed_at": "2025-08-30T17:58:37Z",
+      "status": "failed"
     }
   },
   "changelog": [

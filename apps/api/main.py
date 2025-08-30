@@ -91,28 +91,37 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, project_id: str):
         await websocket.accept()
         self.active_connections[project_id] = websocket
+        print(f"🔌 WebSocket connected for project {project_id}")
 
     def disconnect(self, project_id: str):
         if project_id in self.active_connections:
             del self.active_connections[project_id]
+            print(f"🔌 WebSocket disconnected for project {project_id}")
 
     async def send_progress(self, project_id: str, data: dict):
         if project_id in self.active_connections:
             try:
                 await self.active_connections[project_id].send_json(data)
-            except:
+                print(f"📡 Sent WebSocket update to {project_id}: {data.get('message', 'unknown')}")
+            except Exception as e:
+                print(f"❌ WebSocket send failed for {project_id}: {e}")
                 self.disconnect(project_id)
 
 manager = ConnectionManager()
 
+# Set the WebSocket manager in background tasks
+from background_tasks import set_websocket_manager
+set_websocket_manager(manager)
+
 # Application start time for metrics
 start_time = time.time()
+print("🚀 ViralSplit API starting with WebSocket support...")
 
 # ===== HEALTH CHECK & MONITORING =====
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for deployment platforms"""
+    """Health check endpoint for deployment platforms - WebSocket enabled"""
     try:
         # Basic health check
         return {

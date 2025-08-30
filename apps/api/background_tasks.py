@@ -7,6 +7,22 @@ from typing import Dict, Any
 from fastapi import BackgroundTasks
 import re
 
+# Import WebSocket manager (will be set from main.py)
+manager = None
+
+def set_websocket_manager(ws_manager):
+    """Set the WebSocket manager from main.py"""
+    global manager
+    manager = ws_manager
+
+async def send_websocket_update(project_id: str, data: Dict[str, Any]):
+    """Send WebSocket update if manager is available"""
+    if manager:
+        try:
+            await manager.send_progress(project_id, data)
+        except Exception as e:
+            print(f"WebSocket update failed: {e}")
+
 # In-memory task store (replace with Redis/database in production)
 background_tasks: Dict[str, Dict[str, Any]] = {}
 
@@ -159,26 +175,32 @@ async def simulate_youtube_processing(project_id: str, youtube_url: str):
         # Simulate processing steps
         await asyncio.sleep(1)
         
-        background_tasks[project_id].update({
+        # Step 1: Downloading
+        step1_data = {
             "status": "processing",
             "progress": 30,
             "message": "Downloading video from YouTube...",
             "updated_at": time.time()
-        })
+        }
+        background_tasks[project_id].update(step1_data)
+        await send_websocket_update(project_id, step1_data)
         
         await asyncio.sleep(1)
         
-        background_tasks[project_id].update({
+        # Step 2: Analyzing  
+        step2_data = {
             "status": "processing",
             "progress": 60,
             "message": "Analyzing video content...",
             "updated_at": time.time()
-        })
+        }
+        background_tasks[project_id].update(step2_data)
+        await send_websocket_update(project_id, step2_data)
         
         await asyncio.sleep(1)
         
-        # Mark as complete
-        background_tasks[project_id].update({
+        # Step 3: Complete
+        complete_data = {
             "status": "completed",
             "progress": 100,
             "message": "YouTube video processed successfully (simulated)",
@@ -190,7 +212,9 @@ async def simulate_youtube_processing(project_id: str, youtube_url: str):
                 "title": "Sample Video",
                 "ready": True
             }
-        })
+        }
+        background_tasks[project_id].update(complete_data)
+        await send_websocket_update(project_id, complete_data)
         
         print(f"✅ Simulated YouTube processing completed for project {project_id}")
         

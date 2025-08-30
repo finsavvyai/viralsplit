@@ -39,6 +39,9 @@ ViralSplit is a comprehensive multi-platform content optimization platform with 
 - `./scripts/version.sh increment` - Increment build number
 - `./scripts/version.sh deploy` - Create deployment tag
 - `./scripts/version.sh status` - Check deployment status
+- `./deployment/scripts/deploy_all.sh` - Deploy all services
+- `./deployment/scripts/deploy_railway.sh` - Deploy API to Railway
+- `./deployment/scripts/deploy_vercel.sh` - Deploy web apps to Vercel
 
 ## Architecture
 

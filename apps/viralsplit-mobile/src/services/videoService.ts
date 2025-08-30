@@ -1,6 +1,9 @@
 import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Alert } from 'react-native';
 import { apiService } from './api';
+import io from 'socket.io-client';
 
 export interface VideoUpload {
   id: string;
@@ -9,6 +12,11 @@ export interface VideoUpload {
   size: number;
   progress: number;
   status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
+  thumbnail?: string;
+  duration?: number;
+  viral_score?: number;
+  project_id?: string;
+  transformations?: Record<string, string>;
 }
 
 export interface ProcessingOptions {
@@ -21,6 +29,8 @@ export interface ProcessingOptions {
 class VideoService {
   private uploads: Map<string, VideoUpload> = new Map();
   private uploadTasks: Map<string, FileSystem.DownloadResumable> = new Map();
+  private socket: any = null;
+  private progressCallbacks: Map<string, (progress: any) => void> = new Map();
 
   async uploadVideo(
     uri: string, 
@@ -35,67 +45,113 @@ class VideoService {
       throw new Error('Video file not found');
     }
 
+    // Generate thumbnail
+    const thumbnail = await this.generateThumbnail(uri);
+    
     const upload: VideoUpload = {
       id: uploadId,
       uri,
       filename,
       size: fileInfo.size || 0,
       progress: 0,
-      status: 'pending'
+      status: 'pending',
+      thumbnail,
     };
 
     this.uploads.set(uploadId, upload);
 
     try {
-      // Create multipart form data
-      const formData = new FormData();
-      formData.append('video', {
-        uri,
-        type: 'video/mp4',
-        name: filename,
-      } as any);
-      formData.append('options', JSON.stringify(options));
+      // Step 1: Request upload URL from API
+      const uploadRequest = await apiService.requestUpload({
+        filename,
+        file_size: fileInfo.size || 0,
+        content_type: 'video/mp4',
+      });
 
-      // Start chunked upload
-      const uploadTask = FileSystem.createUploadTask(
-        `${process.env.API_BASE_URL || 'https://viralspiritio-production.up.railway.app'}/api/videos/upload`,
-        uri,
-        {
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-          fieldName: 'video',
-          parameters: {
-            filename,
-            options: JSON.stringify(options)
-          }
-        },
-        (progress) => {
-          const progressPercent = progress.totalBytesSent / progress.totalBytesExpectedToSend * 100;
-          this.updateUploadProgress(uploadId, progressPercent);
-          onProgress?.(progressPercent);
-        }
-      );
+      upload.project_id = uploadRequest.project_id;
+      this.uploads.set(uploadId, upload);
 
-      this.uploadTasks.set(uploadId, uploadTask);
+      // Step 2: Upload file using the real API
       upload.status = 'uploading';
       
-      const result = await uploadTask.uploadAsync();
+      const uploadResult = await apiService.uploadVideoFile(uri, filename, (progress) => {
+        this.updateUploadProgress(uploadId, progress);
+        onProgress?.(progress);
+      });
+
+      // Step 3: Complete the upload
+      await apiService.completeUpload(uploadRequest.project_id);
       
-      if (result && result.status === 200) {
-        const response = JSON.parse(result.body);
-        upload.status = 'processing';
-        
-        // Start polling for processing status
-        this.pollProcessingStatus(response.videoId, uploadId);
-        
-        return response.videoId;
-      } else {
-        throw new Error('Upload failed');
-      }
+      upload.status = 'processing';
+      this.uploads.set(uploadId, upload);
+      
+      // Step 4: Set up WebSocket for real-time progress
+      this.setupWebSocket(uploadRequest.project_id, uploadId);
+      
+      // Step 5: Start processing
+      await apiService.transformVideo(uploadRequest.project_id, {
+        platforms: options.platforms,
+        options: {
+          quality: options.quality,
+          ai_enhancements: options.aiEnhancements,
+          viral_optimization: options.viralOptimization,
+        },
+      });
+      
+      return uploadRequest.project_id;
     } catch (error) {
       upload.status = 'failed';
       this.uploads.set(uploadId, upload);
       throw error;
     }
+  }
+
+  private async generateThumbnail(videoUri: string): Promise<string> {
+    try {
+      const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
+        time: 1000, // 1 second into the video
+        quality: 0.8,
+      });
+      return uri;
+    } catch (error) {
+      console.error('Failed to generate thumbnail:', error);
+      return '';
+    }
+  }
+
+  private setupWebSocket(projectId: string, uploadId: string) {
+    if (!this.socket) {
+      this.socket = io('https://viralspiritio-production.up.railway.app', {
+        transports: ['websocket', 'polling'],
+      });
+    }
+
+    // Listen for progress updates
+    this.socket.on(`progress_${projectId}`, (data: any) => {
+      const upload = this.uploads.get(uploadId);
+      if (upload) {
+        upload.progress = data.progress;
+        if (data.status) {
+          upload.status = data.status;
+        }
+        if (data.viral_score) {
+          upload.viral_score = data.viral_score;
+        }
+        if (data.transformations) {
+          upload.transformations = data.transformations;
+        }
+        this.uploads.set(uploadId, upload);
+        
+        // Call any registered progress callbacks
+        const callback = this.progressCallbacks.get(uploadId);
+        if (callback) {
+          callback(data);
+        }
+      }
+    });
+
+    // Join project room
+    this.socket.emit('join_project', projectId);
   }
 
   private updateUploadProgress(uploadId: string, progress: number) {
@@ -106,85 +162,83 @@ class VideoService {
     }
   }
 
-  private async pollProcessingStatus(videoId: string, uploadId: string) {
-    const maxAttempts = 60; // 5 minutes with 5-second intervals
-    let attempts = 0;
-
-    const poll = async () => {
-      try {
-        const status = await apiService.get(`/api/videos/${videoId}/status`);
-        const upload = this.uploads.get(uploadId);
-        
-        if (upload) {
-          if (status.status === 'completed') {
-            upload.status = 'completed';
-            this.uploads.set(uploadId, upload);
-            return;
-          } else if (status.status === 'failed') {
-            upload.status = 'failed';
-            this.uploads.set(uploadId, upload);
-            return;
-          }
-        }
-
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000); // Poll every 5 seconds
-        } else {
-          // Timeout
-          if (upload) {
-            upload.status = 'failed';
-            this.uploads.set(uploadId, upload);
-          }
-        }
-      } catch (error) {
-        console.error('Error polling status:', error);
-        const upload = this.uploads.get(uploadId);
-        if (upload) {
-          upload.status = 'failed';
-          this.uploads.set(uploadId, upload);
-        }
-      }
-    };
-
-    poll();
+  subscribeToProgress(uploadId: string, callback: (progress: any) => void) {
+    this.progressCallbacks.set(uploadId, callback);
   }
 
-  async processVideo(videoId: string, options: ProcessingOptions): Promise<void> {
-    try {
-      await apiService.post(`/api/videos/${videoId}/process`, options);
-    } catch (error) {
-      throw new Error('Failed to start video processing');
+  unsubscribeFromProgress(uploadId: string) {
+    this.progressCallbacks.delete(uploadId);
+  }
+
+  async saveToGallery(videoUri: string): Promise<void> {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status === 'granted') {
+      await MediaLibrary.saveToLibraryAsync(videoUri);
+    } else {
+      throw new Error('Media library permission required');
     }
   }
 
-  async getProcessingStatus(videoId: string) {
+  async analyzeVideoRealTime(videoUri: string): Promise<any> {
     try {
-      return await apiService.get(`/api/videos/${videoId}/status`);
+      return await apiService.analyzeRecording(videoUri);
     } catch (error) {
-      throw new Error('Failed to get processing status');
+      console.error('Real-time analysis failed:', error);
+      return {
+        current_score: 0,
+        suggestions: ['Unable to analyze video'],
+        hook_strength: 0,
+        lighting_quality: 0,
+        audio_quality: 0,
+        composition_score: 0,
+        trending_elements: [],
+      };
     }
   }
 
-  async downloadVideo(videoId: string, platform: string): Promise<string> {
+  async getProjectStatus(projectId: string) {
     try {
-      const response = await apiService.get(`/api/videos/${videoId}/download/${platform}`);
-      const downloadUrl = response.downloadUrl;
+      return await apiService.getProjectStatus(projectId);
+    } catch (error) {
+      throw new Error('Failed to get project status');
+    }
+  }
+
+  async getViralScore(projectId: string) {
+    try {
+      return await apiService.getViralScore(projectId);
+    } catch (error) {
+      throw new Error('Failed to get viral score');
+    }
+  }
+
+  async downloadVideo(projectId: string, platform: string): Promise<string> {
+    try {
+      const project = await this.getProjectStatus(projectId);
+      const transformationUrl = project.transformations?.[platform];
       
-      const filename = `${videoId}_${platform}.mp4`;
+      if (!transformationUrl) {
+        throw new Error(`No transformation available for ${platform}`);
+      }
+      
+      const filename = `${projectId}_${platform}.mp4`;
       const localPath = `${FileSystem.documentDirectory}${filename}`;
       
-      const downloadResult = await FileSystem.downloadAsync(downloadUrl, localPath);
+      const downloadResult = await FileSystem.downloadAsync(transformationUrl, localPath);
       return downloadResult.uri;
     } catch (error) {
       throw new Error('Failed to download video');
     }
   }
 
-  async remixContent(videoId: string, remixOptions: any): Promise<string[]> {
+  async remixContent(projectId: string, remixOptions: any): Promise<any> {
     try {
-      const response = await apiService.post(`/api/videos/${videoId}/remix`, remixOptions);
-      return response.remixedVideoIds;
+      const formData = new FormData();
+      formData.append('project_id', projectId);
+      formData.append('options', JSON.stringify(remixOptions));
+      
+      const response = await apiService.remixContent(formData);
+      return response.remix_results;
     } catch (error) {
       throw new Error('Failed to remix content');
     }
@@ -231,9 +285,19 @@ class VideoService {
       if (upload.status === 'completed' || upload.status === 'failed') {
         this.uploads.delete(id);
         this.uploadTasks.delete(id);
+        this.progressCallbacks.delete(id);
       }
     }
+  }
+
+  disconnect(): void {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.progressCallbacks.clear();
   }
 }
 
 export const videoService = new VideoService();
+export default videoService;

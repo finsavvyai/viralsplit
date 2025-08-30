@@ -4,14 +4,19 @@ import { NavigationContainer } from '@react-navigation/native';
 import { Provider } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 
 import { store } from '@/store';
 import AppNavigator from '@/navigation/AppNavigator';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import LoadingScreen from '@/screens/LoadingScreen';
+import { realTimeService } from '@/services/realTimeService';
+import { arService } from '@/services/arService';
+import { socialAuthService } from '@/services/socialAuthService';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();

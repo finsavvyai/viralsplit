@@ -20,10 +20,10 @@ class APIService {
   private baseURL: string;
 
   constructor() {
-    // Use your existing API endpoint - update this with your actual API URL
+    // Use the real deployed API endpoint
     this.baseURL = __DEV__ 
-      ? 'https://api.viralsplit.io'  // Production
-      : 'https://api.viralsplit.io'; // Production
+      ? 'https://viralspiritio-production.up.railway.app'  // Development uses production API
+      : 'https://viralspiritio-production.up.railway.app'; // Production API
     
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -55,16 +55,44 @@ class APIService {
 
   // ===== AUTHENTICATION =====
   
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string, mfa_code?: string): Promise<AuthResponse> {
     const response = await this.client.post<AuthResponse>('/api/auth/login', {
       email,
       password,
+      mfa_code,
     });
     
     // Store token for future requests
-    await AsyncStorage.setItem('auth_token', response.data.access_token);
-    await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+    if (response.data.access_token) {
+      await AsyncStorage.setItem('auth_token', response.data.access_token);
+      await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     
+    return response.data;
+  }
+
+  async enableMFA(): Promise<{ qr_code: string; backup_codes: string[] }> {
+    const response = await this.client.post('/api/auth/mfa/enable');
+    return response.data;
+  }
+
+  async verifyMFA(code: string): Promise<{ verified: boolean }> {
+    const response = await this.client.post('/api/auth/mfa/verify', { code });
+    return response.data;
+  }
+
+  async disableMFA(password: string): Promise<{ success: boolean }> {
+    const response = await this.client.post('/api/auth/mfa/disable', { password });
+    return response.data;
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const response = await this.client.post('/api/auth/password-reset/request', { email });
+    return response.data;
+  }
+
+  async resetPassword(token: string, new_password: string): Promise<{ success: boolean }> {
+    const response = await this.client.post('/api/auth/password-reset/confirm', { token, new_password });
     return response.data;
   }
 
@@ -234,17 +262,45 @@ class APIService {
 
   // ===== MOBILE-SPECIFIC FEATURES =====
   
-  async analyzeRecording(videoBlob: Blob): Promise<RealTimeAnalysis> {
+  async analyzeRecording(videoUri: string): Promise<RealTimeAnalysis> {
     const formData = new FormData();
-    formData.append('video', videoBlob as any, 'recording.mp4');
+    formData.append('video', {
+      uri: videoUri,
+      type: 'video/mp4',
+      name: 'recording.mp4',
+    } as any);
     
     const response = await this.client.post<RealTimeAnalysis>(
-      '/api/mobile/recording/analyze',
+      '/api/mobile/analyze-recording',
       formData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      }
+    );
+    return response.data;
+  }
+
+  async uploadVideoFile(videoUri: string, filename: string, onProgress?: (progress: number) => void): Promise<UploadResponse> {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: videoUri,
+      type: 'video/mp4',
+      name: filename,
+    } as any);
+    
+    const response = await this.client.post<UploadResponse>(
+      '/api/upload/video',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: onProgress ? (progressEvent) => {
+          const progress = (progressEvent.loaded / (progressEvent.total || 1)) * 100;
+          onProgress(progress);
+        } : undefined,
       }
     );
     return response.data;

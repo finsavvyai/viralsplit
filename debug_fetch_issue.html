@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Fetch Issue - app.viralsplit.io</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 10px; 
+            cursor: pointer; 
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .fetch-test {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .loading {
+            color: #007bff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Fetch Issue - app.viralsplit.io</h1>
+        <p>Testing specific fetch problems from app.viralsplit.io</p>
+
+        <div class="fetch-test">
+            <h3>Test 1: Direct Page Load</h3>
+            <button onclick="testDirectPageLoad()">Test Direct Page Load</button>
+            <div id="directPageResult"></div>
+        </div>
+
+        <div class="fetch-test">
+            <h3>Test 2: Fetch with Different Methods</h3>
+            <button onclick="testFetchMethods()">Test Fetch Methods</button>
+            <div id="fetchMethodsResult"></div>
+        </div>
+
+        <div class="fetch-test">
+            <h3>Test 3: CORS Test</h3>
+            <button onclick="testCORS()">Test CORS Issues</button>
+            <div id="corsResult"></div>
+        </div>
+
+        <div class="fetch-test">
+            <h3>Test 4: API Call from Frontend</h3>
+            <button onclick="testAPICall()">Test API Call</button>
+            <div id="apiCallResult"></div>
+        </div>
+
+        <div class="fetch-test">
+            <h3>Test 5: Network Diagnostics</h3>
+            <button onclick="testNetworkDiagnostics()">Run Network Diagnostics</button>
+            <div id="networkResult"></div>
+        </div>
+
+        <h3>Debug Logs:</h3>
+        <div class="log" id="debugLog"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += logEntry + '\n';
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(logEntry);
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="test-result ${type}">${message}</div>`;
+        }
+
+        async function testDirectPageLoad() {
+            log('=== Testing Direct Page Load ===');
+            showResult('directPageResult', '<span class="loading">Testing...</span>');
+            
+            try {
+                const startTime = Date.now();
+                log('Attempting to load app.viralsplit.io directly...');
+                
+                const response = await fetch('https://app.viralsplit.io', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                log(`Response received in ${responseTime}ms`);
+                log(`Status: ${response.status} ${response.statusText}`);
+                log(`URL: ${response.url}`);
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    log(`Content length: ${text.length} characters`);
+                    log(`Content preview: ${text.substring(0, 200)}...`);
+                    
+                    if (text.includes('ViralSplit')) {
+                        showResult('directPageResult', 
+                            `✅ SUCCESS: Page loaded successfully<br>
+                             Status: ${response.status}<br>
+                             Response Time: ${responseTime}ms<br>
+                             Content Length: ${text.length} characters<br>
+                             ViralSplit content detected`, 'success');
+                    } else {
+                        showResult('directPageResult', 
+                            `⚠️ WARNING: Page loaded but ViralSplit content not found<br>
+                             Status: ${response.status}<br>
+                             Response Time: ${responseTime}ms<br>
+                             Content Length: ${text.length} characters`, 'error');
+                    }
+                } else {
+                    showResult('directPageResult', 
+                        `❌ FAILED: HTTP ${response.status} ${response.statusText}<br>
+                         Response Time: ${responseTime}ms`, 'error');
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                showResult('directPageResult', 
+                    `❌ ERROR: ${error.message}<br>
+                     This might be a CORS, network, or DNS issue`, 'error');
+            }
+        }
+
+        async function testFetchMethods() {
+            log('=== Testing Different Fetch Methods ===');
+            showResult('fetchMethodsResult', '<span class="loading">Testing different methods...</span>');
+            
+            const methods = ['GET', 'HEAD', 'OPTIONS'];
+            let results = [];
+            
+            for (const method of methods) {
+                try {
+                    log(`Testing ${method} method...`);
+                    const response = await fetch('https://app.viralsplit.io', {
+                        method: method,
+                        mode: 'cors'
+                    });
+                    
+                    results.push(`✅ ${method}: ${response.status} ${response.statusText}`);
+                    log(`${method} method: ${response.status} ${response.statusText}`);
+                } catch (error) {
+                    results.push(`❌ ${method}: ${error.message}`);
+                    log(`${method} method failed: ${error.message}`);
+                }
+            }
+            
+            showResult('fetchMethodsResult', 
+                `Fetch Methods Test Results:<br>${results.join('<br>')}`, 'info');
+        }
+
+        async function testCORS() {
+            log('=== Testing CORS Issues ===');
+            showResult('corsResult', '<span class="loading">Testing CORS...</span>');
+            
+            try {
+                // Test with different origins
+                const testUrls = [
+                    'https://app.viralsplit.io',
+                    'https://api.viralsplit.io/health',
+                    'https://viralsplit.io'
+                ];
+                
+                let corsResults = [];
+                
+                for (const url of testUrls) {
+                    try {
+                        log(`Testing CORS for: ${url}`);
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            mode: 'cors'
+                        });
+                        
+                        const corsHeader = response.headers.get('Access-Control-Allow-Origin');
+                        corsResults.push(`✅ ${url}: CORS OK (${corsHeader || 'No CORS header'})`);
+                        log(`${url}: CORS OK - ${corsHeader || 'No CORS header'}`);
+                    } catch (error) {
+                        corsResults.push(`❌ ${url}: CORS Error - ${error.message}`);
+                        log(`${url}: CORS Error - ${error.message}`);
+                    }
+                }
+                
+                showResult('corsResult', 
+                    `CORS Test Results:<br>${corsResults.join('<br>')}`, 'info');
+            } catch (error) {
+                showResult('corsResult', 
+                    `❌ CORS Test Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAPICall() {
+            log('=== Testing API Call from Frontend ===');
+            showResult('apiCallResult', '<span class="loading">Testing API call...</span>');
+            
+            try {
+                // Test API health endpoint
+                log('Testing API health endpoint...');
+                const response = await fetch('https://api.viralsplit.io/health', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`API Health: ${JSON.stringify(data)}`);
+                    showResult('apiCallResult', 
+                        `✅ API Call Successful<br>
+                         Status: ${response.status}<br>
+                         Health: ${data.status}<br>
+                         Uptime: ${Math.round(data.uptime)}s`, 'success');
+                } else {
+                    showResult('apiCallResult', 
+                        `❌ API Call Failed<br>
+                         Status: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                log(`API Call Error: ${error.message}`);
+                showResult('apiCallResult', 
+                    `❌ API Call Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testNetworkDiagnostics() {
+            log('=== Running Network Diagnostics ===');
+            showResult('networkResult', '<span class="loading">Running diagnostics...</span>');
+            
+            let diagnostics = [];
+            
+            // Test DNS resolution
+            try {
+                log('Testing DNS resolution...');
+                const response = await fetch('https://app.viralsplit.io', {
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                diagnostics.push('✅ DNS Resolution: OK');
+                log('DNS Resolution: OK');
+            } catch (error) {
+                diagnostics.push(`❌ DNS Resolution: ${error.message}`);
+                log(`DNS Resolution: ${error.message}`);
+            }
+            
+            // Test HTTPS
+            try {
+                log('Testing HTTPS connection...');
+                const response = await fetch('https://app.viralsplit.io', {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                diagnostics.push('✅ HTTPS Connection: OK');
+                log('HTTPS Connection: OK');
+            } catch (error) {
+                diagnostics.push(`❌ HTTPS Connection: ${error.message}`);
+                log(`HTTPS Connection: ${error.message}`);
+            }
+            
+            // Test browser capabilities
+            diagnostics.push(`ℹ️ User Agent: ${navigator.userAgent}`);
+            diagnostics.push(`ℹ️ Online Status: ${navigator.onLine ? 'Online' : 'Offline'}`);
+            diagnostics.push(`ℹ️ Connection Type: ${navigator.connection ? navigator.connection.effectiveType : 'Unknown'}`);
+            
+            log(`User Agent: ${navigator.userAgent}`);
+            log(`Online Status: ${navigator.onLine ? 'Online' : 'Offline'}`);
+            
+            showResult('networkResult', 
+                `Network Diagnostics:<br>${diagnostics.join('<br>')}`, 'info');
+        }
+
+        // Initialize
+        log('🔍 Fetch Debug Tool initialized');
+        log('Ready to debug app.viralsplit.io fetch issues');
+    </script>
+</body>
+</html>

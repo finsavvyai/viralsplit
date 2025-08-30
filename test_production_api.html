@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Production API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .processing { background-color: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        input { padding: 8px; margin: 10px; width: 300px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Production API</h1>
+    
+    <div>
+        <label for="youtubeUrl">YouTube URL:</label><br>
+        <input type="text" id="youtubeUrl" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" placeholder="Enter YouTube URL">
+        <button onclick="testYouTubeProcessing()">Test YouTube Processing</button>
+        <button onclick="testHealth()">Test Health</button>
+        <button onclick="testCORS()">Test CORS</button>
+    </div>
+    
+    <div id="status"></div>
+    <div id="progress"></div>
+    <div id="results"></div>
+    <div id="logs" class="log"></div>
+    
+    <script>
+        const API_BASE = 'https://api.viralsplit.io';
+        
+        function log(message) {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        async function testHealth() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status processing';
+            statusDiv.textContent = 'Testing API health...';
+            
+            try {
+                log('🔍 Testing API health...');
+                const response = await fetch(`${API_BASE}/health`);
+                log(`📡 Health response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Health check successful: ${JSON.stringify(data)}`);
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✅ API is healthy!';
+                } else {
+                    throw new Error(`Health check failed: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Health check error: ${error.message}`);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ Health check failed: ${error.message}`;
+            }
+        }
+        
+        async function testCORS() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status processing';
+            statusDiv.textContent = 'Testing CORS...';
+            
+            try {
+                log('🔍 Testing CORS with OPTIONS request...');
+                const response = await fetch(`${API_BASE}/api/upload/youtube`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                log(`📡 CORS response status: ${response.status}`);
+                log(`📡 CORS headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+                
+                if (response.ok) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✅ CORS is working!';
+                } else {
+                    throw new Error(`CORS failed: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ CORS error: ${error.message}`);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ CORS failed: ${error.message}`;
+            }
+        }
+        
+        async function testYouTubeProcessing() {
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            const resultsDiv = document.getElementById('results');
+            const url = document.getElementById('youtubeUrl').value;
+            
+            if (!url || !url.includes('youtube.com')) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Please enter a valid YouTube URL';
+                return;
+            }
+            
+            statusDiv.className = 'status processing';
+            statusDiv.textContent = 'Starting YouTube processing test...';
+            progressDiv.textContent = '';
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // Step 1: Submit YouTube URL
+                log('🔍 Testing YouTube processing with URL: ' + url);
+                
+                const response = await fetch(`${API_BASE}/api/upload/youtube`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        agreed_to_terms: true,
+                        is_trial: true
+                    })
+                });
+                
+                log(`📡 Response status: ${response.status}`);
+                log(`📡 Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                log(`📦 Response data: ${JSON.stringify(data)}`);
+                
+                const projectId = data.project_id;
+                
+                statusDiv.textContent = `✅ Processing started! Project ID: ${projectId.substring(0, 8)}...`;
+                progressDiv.textContent = '⏳ Polling for progress updates...';
+                
+                // Step 2: Poll for progress
+                let pollCount = 0;
+                const maxPolls = 30; // 30 seconds max
+                
+                const pollInterval = setInterval(async () => {
+                    pollCount++;
+                    
+                    try {
+                        log(`📊 Polling attempt ${pollCount} for project ${projectId}`);
+                        const statusResponse = await fetch(`${API_BASE}/api/projects/${projectId}/status`, {
+                            headers: {
+                                'Origin': window.location.origin
+                            }
+                        });
+                        
+                        log(`📡 Status response: ${statusResponse.status}`);
+                        
+                        if (statusResponse.ok) {
+                            const statusData = await statusResponse.json();
+                            log(`📊 Status update: ${JSON.stringify(statusData)}`);
+                            
+                            progressDiv.textContent = `Progress: ${statusData.progress || 0}% - ${statusData.message || 'Processing...'}`;
+                            
+                            if (statusData.status === 'ready_for_processing' || statusData.status === 'completed') {
+                                clearInterval(pollInterval);
+                                statusDiv.className = 'status success';
+                                statusDiv.textContent = '✅ YouTube processing completed successfully!';
+                                progressDiv.textContent = `Final status: ${statusData.status}`;
+                                
+                                resultsDiv.innerHTML = `
+                                    <h3>🎉 Processing Results:</h3>
+                                    <p><strong>Status:</strong> ${statusData.status}</p>
+                                    <p><strong>Message:</strong> ${statusData.message}</p>
+                                    <p><strong>Video URL:</strong> ${statusData.youtube_url || 'N/A'}</p>
+                                `;
+                            }
+                        } else {
+                            log(`⚠️ Status check failed: ${statusResponse.status}`);
+                        }
+                    } catch (error) {
+                        log(`❌ Polling error: ${error.message}`);
+                    }
+                    
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval);
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = '❌ Processing timeout - check server logs';
+                        progressDiv.textContent = 'Timed out after 30 seconds';
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ Test failed: ${error.message}`;
+                progressDiv.textContent = '';
+            }
+        }
+        
+        // Test API health on page load
+        window.onload = function() {
+            log('🚀 Page loaded, testing API health...');
+            testHealth();
+        };
+    </script>
+</body>
+</html>

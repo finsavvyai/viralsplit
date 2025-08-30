@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ViralSplit Test Crawler & Debug Tool</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid;
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .processing { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            border-left-color: #ffc107;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 10px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .primary-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .secondary-btn {
+            background: #6c757d;
+            color: white;
+        }
+        .secondary-btn:hover {
+            background: #5a6268;
+        }
+        input, select { 
+            padding: 10px; 
+            margin: 10px; 
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .log { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .test-section {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .user-agent-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕷️ ViralSplit Test Crawler & Debug Tool</h1>
+        <p>Comprehensive testing tool to debug app.viralsplit.io functionality</p>
+
+        <!-- Test Configuration -->
+        <div class="test-section">
+            <h3>🔧 Test Configuration</h3>
+            <div class="user-agent-selector">
+                <label>User Agent:</label>
+                <select id="userAgent">
+                    <option value="mobile">📱 Mobile Browser (iPhone)</option>
+                    <option value="desktop">🖥️ Desktop Browser (Chrome)</option>
+                    <option value="tablet">📱 Tablet Browser (iPad)</option>
+                    <option value="custom">🔧 Custom User Agent</option>
+                </select>
+                <input type="text" id="customUserAgent" placeholder="Custom User Agent" class="hidden">
+            </div>
+            
+            <div>
+                <label>Target URL:</label>
+                <input type="text" id="targetUrl" value="https://app.viralsplit.io" style="width: 300px;">
+            </div>
+            
+            <div>
+                <label>API Endpoint:</label>
+                <input type="text" id="apiUrl" value="https://api.viralsplit.io" style="width: 300px;">
+            </div>
+        </div>
+
+        <!-- Test Controls -->
+        <div class="test-section">
+            <h3>🎮 Test Controls</h3>
+            <button class="primary-btn" onclick="runFullTest()">🚀 Run Full Test Suite</button>
+            <button class="secondary-btn" onclick="testFrontend()">🌐 Test Frontend Only</button>
+            <button class="secondary-btn" onclick="testAPI()">🔌 Test API Only</button>
+            <button class="secondary-btn" onclick="testYouTubeProcessing()">🎬 Test YouTube Processing</button>
+            <button class="secondary-btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="test-section">
+            <h3>📊 Test Metrics</h3>
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalTests">0</div>
+                    <div class="metric-label">Total Tests</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="passedTests">0</div>
+                    <div class="metric-label">Passed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="failedTests">0</div>
+                    <div class="metric-label">Failed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="avgResponseTime">0ms</div>
+                    <div class="metric-label">Avg Response Time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="testResults"></div>
+        </div>
+
+        <!-- Debug Logs -->
+        <div class="test-section">
+            <h3>🔍 Debug Logs</h3>
+            <div class="log" id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        let testMetrics = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            responseTimes: []
+        };
+
+        const userAgents = {
+            mobile: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            desktop: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            tablet: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        };
+
+        // Event Listeners
+        document.getElementById('userAgent').addEventListener('change', function() {
+            const customInput = document.getElementById('customUserAgent');
+            if (this.value === 'custom') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${message}`;
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += logEntry + '\n';
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(logEntry);
+        }
+
+        function updateMetrics() {
+            document.getElementById('totalTests').textContent = testMetrics.total;
+            document.getElementById('passedTests').textContent = testMetrics.passed;
+            document.getElementById('failedTests').textContent = testMetrics.failed;
+            
+            const avgTime = testMetrics.responseTimes.length > 0 
+                ? Math.round(testMetrics.responseTimes.reduce((a, b) => a + b, 0) / testMetrics.responseTimes.length)
+                : 0;
+            document.getElementById('avgResponseTime').textContent = avgTime + 'ms';
+        }
+
+        function addTestResult(testName, status, details = '') {
+            const resultsDiv = document.getElementById('testResults');
+            const statusClass = status === 'PASS' ? 'success' : 'error';
+            const statusIcon = status === 'PASS' ? '✅' : '❌';
+            
+            const resultHtml = `
+                <div class="status ${statusClass}">
+                    <strong>${statusIcon} ${testName}</strong><br>
+                    ${details}
+                </div>
+            `;
+            resultsDiv.innerHTML += resultHtml;
+            
+            testMetrics.total++;
+            if (status === 'PASS') {
+                testMetrics.passed++;
+            } else {
+                testMetrics.failed++;
+            }
+            updateMetrics();
+        }
+
+        function getCurrentUserAgent() {
+            const userAgentType = document.getElementById('userAgent').value;
+            if (userAgentType === 'custom') {
+                return document.getElementById('customUserAgent').value;
+            }
+            return userAgents[userAgentType];
+        }
+
+        async function makeRequest(url, options = {}) {
+            const startTime = Date.now();
+            const userAgent = getCurrentUserAgent();
+            
+            const defaultOptions = {
+                method: 'GET',
+                headers: {
+                    'User-Agent': userAgent,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                },
+                ...options
+            };
+
+            try {
+                log(`Making request to: ${url}`);
+                log(`User Agent: ${userAgent}`);
+                
+                const response = await fetch(url, defaultOptions);
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                testMetrics.responseTimes.push(responseTime);
+                
+                log(`Response received in ${responseTime}ms - Status: ${response.status}`);
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    statusText: response.statusText,
+                    responseTime,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    url: response.url
+                };
+            } catch (error) {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                testMetrics.responseTimes.push(responseTime);
+                
+                log(`Request failed after ${responseTime}ms: ${error.message}`, 'error');
+                return {
+                    success: false,
+                    error: error.message,
+                    responseTime
+                };
+            }
+        }
+
+        async function testFrontend() {
+            log('=== Testing Frontend ===', 'info');
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            // Test 1: Basic page load
+            log('Test 1: Basic page load');
+            const pageResult = await makeRequest(targetUrl);
+            
+            if (pageResult.success) {
+                addTestResult('Frontend Page Load', 'PASS', 
+                    `Status: ${pageResult.status}, Response Time: ${pageResult.responseTime}ms`);
+                
+                // Test 2: Check for ViralSplit content
+                log('Test 2: Checking for ViralSplit content');
+                try {
+                    const contentResponse = await fetch(targetUrl);
+                    const content = await contentResponse.text();
+                    
+                    if (content.includes('ViralSplit') || content.includes('video optimization')) {
+                        addTestResult('ViralSplit Content Detection', 'PASS', 
+                            'Found ViralSplit content in page');
+                    } else {
+                        addTestResult('ViralSplit Content Detection', 'FAIL', 
+                            'ViralSplit content not found in page');
+                    }
+                } catch (error) {
+                    addTestResult('ViralSplit Content Detection', 'FAIL', 
+                        `Error: ${error.message}`);
+                }
+            } else {
+                addTestResult('Frontend Page Load', 'FAIL', 
+                    `Status: ${pageResult.status}, Error: ${pageResult.error || 'Unknown error'}`);
+            }
+        }
+
+        async function testAPI() {
+            log('=== Testing API ===', 'info');
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            // Test 1: Health check
+            log('Test 1: API Health Check');
+            const healthResult = await makeRequest(`${apiUrl}/health`);
+            
+            if (healthResult.success) {
+                addTestResult('API Health Check', 'PASS', 
+                    `Status: ${healthResult.status}, Response Time: ${healthResult.responseTime}ms`);
+                
+                // Test 2: Check health response content
+                try {
+                    const healthResponse = await fetch(`${apiUrl}/health`);
+                    const healthData = await healthResponse.json();
+                    
+                    if (healthData.status === 'healthy') {
+                        addTestResult('API Health Status', 'PASS', 
+                            `Uptime: ${Math.round(healthData.uptime)}s`);
+                    } else {
+                        addTestResult('API Health Status', 'FAIL', 
+                            `Unexpected status: ${healthData.status}`);
+                    }
+                } catch (error) {
+                    addTestResult('API Health Status', 'FAIL', 
+                        `Error parsing health response: ${error.message}`);
+                }
+            } else {
+                addTestResult('API Health Check', 'FAIL', 
+                    `Status: ${healthResult.status}, Error: ${healthResult.error || 'Unknown error'}`);
+            }
+        }
+
+        async function testYouTubeProcessing() {
+            log('=== Testing YouTube Processing ===', 'info');
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            // Test 1: YouTube upload endpoint
+            log('Test 1: YouTube Upload Endpoint');
+            const youtubeData = {
+                url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                agreed_to_terms: true,
+                is_trial: true
+            };
+            
+            const uploadResult = await makeRequest(`${apiUrl}/api/upload/youtube`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': getCurrentUserAgent()
+                },
+                body: JSON.stringify(youtubeData)
+            });
+            
+            if (uploadResult.success) {
+                addTestResult('YouTube Upload Endpoint', 'PASS', 
+                    `Status: ${uploadResult.status}, Response Time: ${uploadResult.responseTime}ms`);
+                
+                // Test 2: Check upload response
+                try {
+                    const uploadResponse = await fetch(`${apiUrl}/api/upload/youtube`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'User-Agent': getCurrentUserAgent()
+                        },
+                        body: JSON.stringify(youtubeData)
+                    });
+                    
+                    const uploadResponseData = await uploadResponse.json();
+                    
+                    if (uploadResponseData.project_id) {
+                        addTestResult('YouTube Upload Response', 'PASS', 
+                            `Project ID: ${uploadResponseData.project_id}`);
+                        
+                        // Test 3: Check project status
+                        log('Test 3: Project Status Check');
+                        const statusResult = await makeRequest(`${apiUrl}/api/projects/${uploadResponseData.project_id}/status`);
+                        
+                        if (statusResult.success) {
+                            addTestResult('Project Status Check', 'PASS', 
+                                `Status: ${statusResult.status}, Response Time: ${statusResult.responseTime}ms`);
+                        } else {
+                            addTestResult('Project Status Check', 'FAIL', 
+                                `Error: ${statusResult.error || 'Unknown error'}`);
+                        }
+                    } else {
+                        addTestResult('YouTube Upload Response', 'FAIL', 
+                            'No project_id in response');
+                    }
+                } catch (error) {
+                    addTestResult('YouTube Upload Response', 'FAIL', 
+                        `Error: ${error.message}`);
+                }
+            } else {
+                addTestResult('YouTube Upload Endpoint', 'FAIL', 
+                    `Status: ${uploadResult.status}, Error: ${uploadResult.error || 'Unknown error'}`);
+            }
+        }
+
+        async function runFullTest() {
+            log('🚀 Starting Full Test Suite...', 'info');
+            
+            // Reset metrics
+            testMetrics = {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                responseTimes: []
+            };
+            
+            // Clear previous results
+            document.getElementById('testResults').innerHTML = '';
+            
+            // Run all tests
+            await testFrontend();
+            await testAPI();
+            await testYouTubeProcessing();
+            
+            log('✅ Full Test Suite Complete!', 'info');
+            log(`📊 Final Results: ${testMetrics.passed}/${testMetrics.total} tests passed`, 'info');
+        }
+
+        function clearLogs() {
+            document.getElementById('debugLog').innerHTML = '';
+            document.getElementById('testResults').innerHTML = '';
+            testMetrics = {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                responseTimes: []
+            };
+            updateMetrics();
+            log('🗑️ Logs cleared', 'info');
+        }
+
+        // Initialize
+        log('🕷️ ViralSplit Test Crawler initialized', 'info');
+        log('Ready to test app.viralsplit.io functionality', 'info');
+    </script>
+</body>
+</html>

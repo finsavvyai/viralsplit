@@ -1,16 +1,16 @@
 {
   "version": "1.0.0",
-  "build": 76,
+  "build": 79,
   "last_deployment": {
     "railway": {
-      "build": 75,
-      "deployed_at": "2025-08-30T17:42:11Z",
-      "status": "deploying"
+      "build": 77,
+      "deployed_at": "2025-08-30T19:25:27Z",
+      "status": "deployed"
     },
     "vercel": {
-      "build": 76,
-      "deployed_at": "2025-08-30T17:58:37Z",
-      "status": "failed"
+      "build": 79,
+      "deployed_at": "2025-08-30T20:15:00Z",
+      "status": "deploying"
     }
   },
   "changelog": [
@@ -284,6 +284,20 @@
         "Enhanced mobile video processing experience with fun animations",
         "Redesigned upload interface with gradient themes and glass effects",
         "Added animated progress indicators with bouncing dots"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": 79,
+      "date": "2025-08-30",
+      "changes": [
+        "Fixed YouTube processing stuck at 0% issue",
+        "Implemented real video processing with yt-dlp and FFmpeg",
+        "Added fallback to simulated processing",
+        "Fixed DNS configuration for app.viralsplit.io",
+        "Resolved fetch issues and browser compatibility",
+        "Updated all dependencies and fixed missing packages",
+        "Enhanced production deployment and monitoring"
       ]
     }
   ]

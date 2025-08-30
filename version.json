@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
-  "build": 85,
+  "build": 87,
   "last_deployment": {
     "railway": {
-      "build": 85,
-      "deployed_at": "2025-08-30T21:05:00Z",
+      "build": 87,
+      "deployed_at": "2025-08-30T21:15:00Z",
       "status": "deploying"
     },
     "vercel": {
-      "build": 85,
-      "deployed_at": "2025-08-30T21:05:00Z",
+      "build": 87,
+      "deployed_at": "2025-08-30T21:15:00Z",
       "status": "deploying"
     }
   },
